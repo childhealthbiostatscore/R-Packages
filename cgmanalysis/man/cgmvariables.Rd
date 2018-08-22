@@ -4,12 +4,12 @@
 \alias{cgmvariables}
 \title{Calculate CGM Variables}
 \usage{
-cgmvariables(inputdirectory = "Cleaned CSVs",
-             outputdirectory = "User/Desktop",
-             outputname = "REDCap Upload",
-             aboveexcursionlength = 35,
-             belowexcursionlength = 10,
-             magedef = "1sd")
+cgmvariables(inputdirectory,
+outputdirectory = tempdir(),
+outputname = "REDCap Upload",
+aboveexcursionlength = 35,
+belowexcursionlength = 10,
+magedef = "1sd")
 }
 \arguments{
 \item{inputdirectory}{The directory containing cleaned CSV files for

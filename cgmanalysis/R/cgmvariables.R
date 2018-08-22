@@ -21,15 +21,13 @@
 #' threshold to count an excursion.
 #' @param magedef How large an excursion needs to be in order to count in the 
 #' MAGE calculation (e.g. greater than 1 standard deviation).
-#' @import pracma,lubridate,zoo,pastecs
-#' @usage
-#' cgmvariables(inputdirectory = "Cleaned CSVs",
-#'              outputdirectory = "User/Desktop",
-#'              outputname = "REDCap Upload",
-#'              aboveexcursionlength = 35,
-#'              belowexcursionlength = 10,
-#'              magedef = "1sd")
-#' @examples
+#' @usage cgmvariables(inputdirectory,
+#' outputdirectory = tempdir(),
+#' outputname = "REDCap Upload",
+#' aboveexcursionlength = 35,
+#' belowexcursionlength = 10,
+#' magedef = "1sd")
+#' @examples cgmvariables(system.file("extdata","Cleaned",package = "cgmanalysis"))
 #' @return A data frame containing calculated CGM variables, with each column
 #' representing one CGM file.
 #' @export
@@ -267,7 +265,7 @@ cgmvariables <- function(inputdirectory,
     cgmupload["daytime_auc",f] <- aucs[base::length(daytime_sensor)]
     
 # Other daytime sensor glucose variables.
-    cgmupload["daytime_avg_sensor_glucose",f] <- base::mean(na.omit(daytime_sensor))
+    cgmupload["daytime_avg_sensor_glucose",f] <- base::mean(stats::na.omit(daytime_sensor))
     cgmupload["daytime_min_sensor_glucose",f] <- min(daytime_sensor)
     cgmupload["daytime_max_sensor_glucose",f] <- max(daytime_sensor)
     cgmupload["daytime_sd",f] <- stats::sd(daytime_sensor)
@@ -292,7 +290,7 @@ cgmvariables <- function(inputdirectory,
     
 # Other nighttime sensor glucose variables.
     cgmupload["nighttime_avg_sens_glucose",f] <- 
-      base::mean(na.omit(nighttime_sensor))
+      base::mean(stats::na.omit(nighttime_sensor))
     cgmupload["nighttime_min_sens_glucose",f] <- min(nighttime_sensor)
     cgmupload["nighttime_max_sens_glucose",f] <- max(nighttime_sensor)
     cgmupload["nighttime_sd",f] <- stats::sd(nighttime_sensor)
@@ -339,7 +337,7 @@ cgmvariables <- function(inputdirectory,
 # unsmoothed data.  
     table$smoothed <- 
       base::as.numeric(zoo::rollapply(zoo::zoo(table$sensorglucose), 9, function(x) c(1,2,4,8,16,8,4,2,1) %*% (x / 46),fill = NA))
-    table$smoothed[1:4] <- base::mean(na.omit(table$sensorglucose[1:4]))
+    table$smoothed[1:4] <- base::mean(stats::na.omit(table$sensorglucose[1:4]))
     table$smoothed[(base::length(table$smoothed)-3):base::length(table$smoothed)] <- 
       base::mean(table$sensorglucose[(base::length(table$sensorglucose)-3):base::length(table$sensorglucose)])
     
@@ -362,16 +360,16 @@ cgmvariables <- function(inputdirectory,
 # Calculate the average of the differences greater than the entire dataset SD, 2SD, etc.
     if (magedef == "1sd") {
       cgmupload["r_mage",f] <- 
-        base::mean(na.omit(differences[base::which(differences > sd)]))
+        base::mean(stats::na.omit(differences[base::which(differences > sd)]))
     } else if (magedef == "1.5sd") {
       cgmupload["r_mage",f] <- 
-        base::mean(na.omit(differences[base::which(differences > (sd * 1.5))]))
+        base::mean(stats::na.omit(differences[base::which(differences > (sd * 1.5))]))
     } else if ( magedef == "2sd") {
       cgmupload["r_mage",f] <- 
-        base::mean(na.omit(differences[base::which(differences > (sd * 2))]))
+        base::mean(stats::na.omit(differences[base::which(differences > (sd * 2))]))
     } else {
       cgmupload["r_mage",f] <- 
-        base::mean(na.omit(differences[base::which(differences > magedef)]))
+        base::mean(stats::na.omit(differences[base::which(differences > magedef)]))
     }
     
 # MODD.
@@ -388,7 +386,7 @@ cgmvariables <- function(inputdirectory,
           base::which(table$time == moddtable$time[r])])))
     }
 # Average the averages.
-    cgmupload["modd",f] <- base::mean(na.omit(moddtable$mean_differences))
+    cgmupload["modd",f] <- base::mean(stats::na.omit(moddtable$mean_differences))
     
 # LBGI and HBGI (based on dc1386 appendix)
     a <- 1.084
@@ -398,8 +396,8 @@ cgmvariables <- function(inputdirectory,
     table$rBG <- 10 * (table$gluctransform^2)
     rl <- table$rBG[base::which(table$gluctransform < 0)]
     rh <- table$rBG[base::which(table$gluctransform > 0)]
-    cgmupload["lbgi",f] <- base::mean(na.omit(rl))
-    cgmupload["hbgi",f] <- base::mean(na.omit(rh))
+    cgmupload["lbgi",f] <- base::mean(stats::na.omit(rl))
+    cgmupload["hbgi",f] <- base::mean(stats::na.omit(rh))
   }
   
 # Write file.

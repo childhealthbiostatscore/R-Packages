@@ -3,6 +3,3 @@
 export(cgmreport)
 export(cgmvariables)
 export(cleandata)
-import("ggplot2,lubridate")
-import("pracma,lubridate,zoo,pastecs")
-import("pracma,lubridate,zoo,tools,gdata,readr")

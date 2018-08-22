@@ -20,13 +20,12 @@
 #' or equal to maximumgap will be interpolated rather than removed.
 #' @param maximumgap Allows the user to determine the longest data gap (in 
 #' minutes) that will be interpolated. 
-#' @import pracma,lubridate,zoo,tools,gdata,readr
 #' @usage cleandata(inputdirectory,
 #' outputdirectory = tempdir(),
 #' removegaps = TRUE,
 #' gapfill = TRUE,
-#' maxgap = 20)
-#' @examples
+#' maximumgap = 20)
+#' @examples cleandata(system.file("extdata", "Dexcom",package = "cgmanalysis"))
 #' @return
 #' @export
 

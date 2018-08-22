@@ -9,10 +9,10 @@
 #' @param inputdirectory The directory containing all cleaned, formatted CGM 
 #' data to be analyzed.
 #' @param outputdirectory The directory where plot PDF files should be written.
-#' @import ggplot2,lubridate
-#' @usage 
-#' @examples 
-#' @return 
+#' @usage cgmreport(inputdirectory, outputdirectory = tempdir())
+#' @examples cgmreport(system.file("extdata","Cleaned",package = "cgmanalysis"))
+#' @return Aggregate and per subject AGP reports based on all of the cleaned CGM 
+#' data in the input directory.
 #' @export
 
 cgmreport <- function(inputdirectory,
@@ -32,7 +32,7 @@ cgmreport <- function(inputdirectory,
 # Iterate through directory, combine all data.   
   for (f in 1:length(files)) {
     cgmdata <- 
-      read.csv(files[f],stringsAsFactors = FALSE,header = TRUE,skipNul = TRUE)
+      utils::read.csv(files[f],stringsAsFactors = FALSE,header = TRUE,skipNul = TRUE)
     id <- cgmdata$subjectid[1]
     cgmdata$subjectid <- id
     aggregateAGPdata <- rbind(cgmdata,aggregateAGPdata)
@@ -40,21 +40,21 @@ cgmreport <- function(inputdirectory,
   aggregateAGPdata$sensorglucose <- as.numeric(aggregateAGPdata$sensorglucose)
   
 # Remove missing data.  
-  aggregateAGPdata <- aggregateAGPdata[complete.cases(aggregateAGPdata),]
+  aggregateAGPdata <- aggregateAGPdata[stats::complete.cases(aggregateAGPdata),]
   
 # Remove dates, so aggregate AGP data can be sorted by time of day.    
   dateparseorder <- c("mdy HM","mdy HMS","mdY HM","mdY HMS","dmy HM","dmy HMS",
                       "dmY HM","dmY HMS","Ymd HM","Ymd HMS","ymd HM","ymd HMS",
                       "Ydm HM","Ydm HMS","ydm HM","ydm HMS")
   aggregateAGPdata$timestamp <- 
-    as.POSIXct(parse_date_time(aggregateAGPdata$timestamp,
+    as.POSIXct(lubridate::parse_date_time(aggregateAGPdata$timestamp,
                                dateparseorder,tz = "UTC"))
-  aggregateAGPdata$hour <- round_date(aggregateAGPdata$timestamp,"hour")
+  aggregateAGPdata$hour <- lubridate::round_date(aggregateAGPdata$timestamp,"hour")
   aggregateAGPdata$time <- 
     as.POSIXlt(strftime(aggregateAGPdata$timestamp,format = "%H:%M"),
                format = "%H:%M")
   aggregateAGPdata$hourmin <- 
-    round_date(aggregateAGPdata$timestamp,"10 minutes")
+    lubridate::round_date(aggregateAGPdata$timestamp,"10 minutes")
   aggregateAGPdata$hourmin <- 
     as.POSIXlt(strftime(aggregateAGPdata$hourmin,format = "%H:%M"),
                format = "%H:%M")
@@ -70,7 +70,7 @@ cgmreport <- function(inputdirectory,
   
   for (i in 1:nrow(quartiles)) {
     quartiles$sensorglucose5perc[i] <- 
-      quantile(as.numeric(aggregateAGPdata$sensorglucose[which(aggregateAGPdata$hourmin == quartiles$hourmin[i])]),0.05)
+      stats::quantile(as.numeric(aggregateAGPdata$sensorglucose[which(aggregateAGPdata$hourmin == quartiles$hourmin[i])]),0.05)
     quartiles$sensorglucoseqone[i] <- 
       as.numeric(summary(aggregateAGPdata$sensorglucose[which(aggregateAGPdata$hourmin == quartiles$hourmin[i])])[2])
     quartiles$sensorglucosemedian[i] <- 
@@ -78,68 +78,68 @@ cgmreport <- function(inputdirectory,
     quartiles$sensorglucoseqthree[i] <- 
       as.numeric(summary(aggregateAGPdata$sensorglucose[which(aggregateAGPdata$hourmin == quartiles$hourmin[i])])[5])
     quartiles$sensorglucose95perc[i] <- 
-      quantile(as.numeric(aggregateAGPdata$sensorglucose[which(aggregateAGPdata$hourmin == quartiles$hourmin[i])]),0.95)
+      stats::quantile(as.numeric(aggregateAGPdata$sensorglucose[which(aggregateAGPdata$hourmin == quartiles$hourmin[i])]),0.95)
   }
   
   quartiles$smooth5perc <- 
-    as.numeric(smooth(quartiles$sensorglucose5perc,kind = "3R",twiceit = TRUE))
+    as.numeric(stats::smooth(quartiles$sensorglucose5perc,kind = "3R",twiceit = TRUE))
   quartiles$smoothqone <- 
-    as.numeric(smooth(quartiles$sensorglucoseqone,kind = "3R",twiceit = TRUE))
+    as.numeric(stats::smooth(quartiles$sensorglucoseqone,kind = "3R",twiceit = TRUE))
   quartiles$smoothmed <- 
-    as.numeric(smooth(quartiles$sensorglucosemedian,kind = "3R",twiceit = TRUE))
+    as.numeric(stats::smooth(quartiles$sensorglucosemedian,kind = "3R",twiceit = TRUE))
   quartiles$smoothqthree <- 
-    as.numeric(smooth(quartiles$sensorglucoseqthree,kind = "3R",twiceit = TRUE))
+    as.numeric(stats::smooth(quartiles$sensorglucoseqthree,kind = "3R",twiceit = TRUE))
   quartiles$smooth95perc <- 
-    as.numeric(smooth(quartiles$sensorglucose95perc,kind = "3R",twiceit = TRUE))
+    as.numeric(stats::smooth(quartiles$sensorglucose95perc,kind = "3R",twiceit = TRUE))
 
 # Plots
-  aggAGPtukey <- ggplot(quartiles, aes(x = quartiles$hourmin))+ 
-    geom_ribbon(aes(ymin = quartiles$smoothqone,ymax = quartiles$smoothqthree,fill = "Interquartile Range"),alpha = 0.5)+
-    geom_line(aes(y = quartiles$smoothmed, color = "Median"))+
-    geom_line(aes(y = quartiles$smooth95perc,linetype="5th & 95th Percentile"))+
-    geom_line(aes(y = quartiles$smooth5perc),linetype="dashed")+
-    ggtitle("Aggregate Daily Overlay (Tukey Smoothing)")+
-    ylab("Sensor BG (mg/dL)")+
-    xlab("Time (hour)")+
-    theme(plot.title = element_text(hjust = 0.5))+
-    scale_x_datetime(labels = function(x) format(x, format = "%H:%M"))+
-    scale_fill_manual("",values = "blue")+
-    scale_color_manual("",values = "red")+
-    scale_linetype_manual("",values = "dashed")
+  aggAGPtukey <- ggplot2::ggplot(quartiles, ggplot2::aes(x = quartiles$hourmin))+ 
+    ggplot2::geom_ribbon(ggplot2::aes(ymin = quartiles$smoothqone,ymax = quartiles$smoothqthree,fill = "Interquartile Range"),alpha = 0.5)+
+    ggplot2::geom_line(ggplot2::aes(y = quartiles$smoothmed, color = "Median"))+
+    ggplot2::geom_line(ggplot2::aes(y = quartiles$smooth95perc,linetype="5th & 95th Percentile"))+
+    ggplot2::geom_line(ggplot2::aes(y = quartiles$smooth5perc),linetype="dashed")+
+    ggplot2::ggtitle("Aggregate Daily Overlay (Tukey Smoothing)")+
+    ggplot2::ylab("Sensor BG (mg/dL)")+
+    ggplot2::xlab("Time (hour)")+
+    ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))+
+    ggplot2::scale_x_datetime(labels = function(x) format(x, format = "%H:%M"))+
+    ggplot2::scale_fill_manual("",values = "blue")+
+    ggplot2::scale_color_manual("",values = "red")+
+    ggplot2::scale_linetype_manual("",values = "dashed")
   
   AGPloess <- 
-    ggplot(aggregateAGPdata, aes(x = aggregateAGPdata$time, y = aggregateAGPdata$sensorglucose))+
-    geom_smooth(aes(y = aggregateAGPdata$sensorglucose,color = aggregateAGPdata$subjectid),se = FALSE)+
-    geom_point(aes(y = aggregateAGPdata$sensorglucose, color = aggregateAGPdata$subjectid),shape = ".",alpha = 0.3)+
-    ggtitle("Daily Overlay Per Subject (LOESS Smoothing)")+
-    ylab("Sensor BG (mg/dL)")+
-    xlab("Time (hour)")+
-    theme(plot.title = element_text(hjust = 0.5))+
-    labs(colour = "Subject ID")+
-    scale_x_datetime(labels = function(x) format(x, format = "%H:%M"))
+    ggplot2::ggplot(aggregateAGPdata, ggplot2::aes(x = aggregateAGPdata$time, y = aggregateAGPdata$sensorglucose))+
+    ggplot2::geom_smooth(ggplot2::aes(y = aggregateAGPdata$sensorglucose,color = aggregateAGPdata$subjectid),se = FALSE)+
+    ggplot2::geom_point(ggplot2::aes(y = aggregateAGPdata$sensorglucose, color = aggregateAGPdata$subjectid),shape = ".",alpha = 0.3)+
+    ggplot2::ggtitle("Daily Overlay Per Subject (LOESS Smoothing)")+
+    ggplot2::ylab("Sensor BG (mg/dL)")+
+    ggplot2::xlab("Time (hour)")+
+    ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))+
+    ggplot2::labs(colour = "Subject ID")+
+    ggplot2::scale_x_datetime(labels = function(x) format(x, format = "%H:%M"))
   
   aggAGPloess <- 
-    ggplot(aggregateAGPdata, aes(x = aggregateAGPdata$time, y = aggregateAGPdata$sensorglucose))+
-    geom_smooth(aes(y = aggregateAGPdata$sensorglucose), se = FALSE)+
-    geom_point(aes(y = aggregateAGPdata$sensorglucose),shape = ".")+
-    ggtitle("Aggregate Daily Overlay (LOESS Smoothing)")+
-    ylab("Sensor BG (mg/dL)")+
-    xlab("Time (hour)")+
-    theme(plot.title = element_text(hjust = 0.5))+
-    scale_x_datetime(labels = function(x) format(x, format = "%H:%M"))
+    ggplot2::ggplot(aggregateAGPdata, ggplot2::aes(x = aggregateAGPdata$time, y = aggregateAGPdata$sensorglucose))+
+    ggplot2::geom_smooth(ggplot2::aes(y = aggregateAGPdata$sensorglucose), se = FALSE)+
+    ggplot2::geom_point(ggplot2::aes(y = aggregateAGPdata$sensorglucose),shape = ".")+
+    ggplot2::ggtitle("Aggregate Daily Overlay (LOESS Smoothing)")+
+    ggplot2::ylab("Sensor BG (mg/dL)")+
+    ggplot2::xlab("Time (hour)")+
+    ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))+
+    ggplot2::scale_x_datetime(labels = function(x) format(x, format = "%H:%M"))
 
-  pdf(base::paste(outputdirectory,"/","AGP_Tukey.pdf",sep = ""),
+  grDevices::pdf(base::paste(outputdirectory,"/","AGP_Tukey.pdf",sep = ""),
       width = 11,height = 8.5)
-  plot(aggAGPtukey)
-  dev.off()
+  graphics::plot(aggAGPtukey)
+  grDevices::dev.off()
   
-  pdf(base::paste(outputdirectory,"/","AGP_Loess_Subject.pdf",sep = ""),
+  grDevices::pdf(base::paste(outputdirectory,"/","AGP_Loess_Subject.pdf",sep = ""),
       width = 11,height = 8.5)
-  plot(AGPloess)
-  dev.off()
+  graphics::plot(AGPloess)
+  grDevices::dev.off()
   
-  pdf(base::paste(outputdirectory,"/","Aggregate_AGP_Loess.pdf",sep = ""),
+  grDevices::pdf(base::paste(outputdirectory,"/","Aggregate_AGP_Loess.pdf",sep = ""),
       width = 11,height = 8.5)
-  plot(aggAGPloess)
-  dev.off()
+  graphics::plot(aggAGPloess)
+  grDevices::dev.off()
 }

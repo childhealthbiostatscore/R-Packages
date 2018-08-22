@@ -8,7 +8,7 @@ cleandata(inputdirectory,
 outputdirectory = tempdir(),
 removegaps = TRUE,
 gapfill = TRUE,
-maxgap = 20)
+maximumgap = 20)
 }
 \arguments{
 \item{inputdirectory}{The directory containing CSV files for cleaning prior 
