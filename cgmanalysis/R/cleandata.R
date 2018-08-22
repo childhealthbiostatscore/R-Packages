@@ -25,7 +25,8 @@
 #' removegaps = TRUE,
 #' gapfill = TRUE,
 #' maximumgap = 20)
-#' @examples cleandata(system.file("extdata", "Dexcom",package = "cgmanalysis"))
+#' @examples cleandata(system.file("extdata", "De-identified",
+#' package = "cgmanalysis"))
 #' @return
 #' @export
 
