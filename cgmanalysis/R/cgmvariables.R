@@ -1,331 +1,410 @@
 #' Calculate CGM Variables
 #'
 #' This function takes cleaned CGM data and returns clinically relevant measures
-#' (e.g. percent time spent over 140). Some variables, like number of glucometer
-#' tests and date of placement will need to be filled in manually in REDCap.
-#' For post-meal glucoses, meals must be determined and entered manually based
-#' on participant food log.
+#' (e.g. percent time spent over 140, MAGE, MODD, etc.). 
+#' 
+#' All files must be saved as a csv, and must have three columns, the first of 
+#' which contains the subject ID in the first cell and date of CGM placement in 
+#' the second (see example files). The names of the columns must be "subjectid" 
+#' "timestamp" and "sensorglucose" (without quotes) respectively. Files can be 
+#' cleaned and formatted using this package's cleandata() function.
+#' 
 #' @param inputdirectory The directory containing cleaned CSV files for
 #' analysis.
 #' @param outputdirectory The directory where you would like the results
 #' spreadsheet to be written.
-#' @param outputname The name of the file containing final CGM variables.
-#' @param cgmtype The brand of CGM you are analyzing, either "iPro" or "Dexcom."
-#' @import pracma
+#' @param outputname The name of the file containing final CGM variables 
+#' (without the file extension).
+#' @param aboveexcursionlength The number of minutes blood sugar must be above 
+#' threshold to count an excursion.
+#' @param belowexcursionlength The number of minutes blood sugar must be below 
+#' threshold to count an excursion.
+#' @param magedef How large an excursion needs to be in order to count in the 
+#' MAGE calculation (e.g. greater than 1 standard deviation).
+#' @import pracma,lubridate,zoo,pastecs
 #' @usage
 #' cgmvariables(inputdirectory = "Cleaned CSVs",
-#'              outputdirectory = tempdir(),
+#'              outputdirectory = "User/Desktop",
 #'              outputname = "REDCap Upload",
-#'              cgmtype = "iPro")
+#'              aboveexcursionlength = 35,
+#'              belowexcursionlength = 10,
+#'              magedef = "1sd")
 #' @examples
-#' cgmvariables(system.file("extdata","Cleaned_iPro_CSVs",
-#'                          package = "cgmanalysis"))
-#' cgmvariables(system.file("extdata","Cleaned_Dexcom_CSVs",
-#'                          package = "cgmanalysis"),cgmtype = "Dexcom")
-#' @return a data frame containing calculated CGM variables, with each column
+#' @return A data frame containing calculated CGM variables, with each column
 #' representing one CGM file.
 #' @export
 
-cgmvariables <- function(inputdirectory = "Cleaned CSVs",
+cgmvariables <- function(inputdirectory,
                          outputdirectory = tempdir(),
                          outputname = "REDCap Upload",
-                         cgmtype = "iPro") {
+                         aboveexcursionlength = 35,
+                         belowexcursionlength = 10,
+                         magedef = "1sd") {
 
-  files <- list.files(path = inputdirectory,full.names = TRUE)
-  cgmupload <- data.frame(matrix(nrow = length(rownames),ncol = length(files)))
-  colnames(cgmupload) <- rep("Record",length(files))
-
-  for (f in 1:length(files)) {
-
-# Read in data, format time columns.
-    if (cgmtype == "iPro"){
-      table <- utils::read.csv(files[f], stringsAsFactors = FALSE)
-      table$Time <- gsub(table$Time, pattern = ".00",replacement = "",
-                         fixed = TRUE)
-      table$Time <- strptime(table$Time,format = "%H:%M:%S")
-      table$Time <- strftime(table$Time)
-      table$Time <- sub(".* ", "",table$Time)
-      table$Timestamp <- gsub(pattern = ".00",replacement = "",table$Timestamp,
-                              fixed = TRUE)
-      cgmupload["subject_id",f] <- paste(table$Patient.ID[5],"--1",sep = "")
-    } else if (cgmtype == "Dexcom") {
-      table <- utils::read.csv(files[f], stringsAsFactors = FALSE)
-      table <- table[, 1:13]
-      colnames(table) <- c("PatientInfoField","PatientInfoValue",
-                           "GlucoseInternalTime","DateTime",
-                           "Sensor.Glucose..mg.dL.","MeterInternalTime",
-                           "MeterDisplayTime","MeterValue",
-                           "EventLoggedInternalTime","EventLoggedDisplayTime",
-                           "EventTime","EventType","EventDescription")
-      table$Time <- NA
-      table$Time <- substring(table$DateTime,12)
-      table$Timestamp <- NA
-      table$Timestamp <- as.POSIXct(table$Time, format = "%H:%M:%S")
-      id <- strsplit(files[f],split = c("/"))[[1]][2]
-      id <- strsplit(id,split = c("_"))[[1]][1]
-      id <- gsub(".*/","",id)
-      cgmupload["subject_id",f] <- id
-    }
-
-# Basic variables.
-    table$Sensor.Glucose..mg.dL. <- as.numeric(table$Sensor.Glucose..mg.dL.)
-    cgmupload["date_cgm_placement", f] <- ""
-    cgmupload["cgm_data_success_failure", f] <- ""
-    cgmupload["insulin_post_study", f] <- ""
-    cgmupload["average_num_gmeter_tests", f] <- ""
-    cgmupload["total_number_of_glucometer", f] <- ""
-    cgmupload["num_days_cgm_wear",f] <-
-      length(which(!is.na(table$Sensor.Glucose..mg.dL.)))/288
-    cgmupload["num_days_good_data",f] <- cgmupload["num_days_cgm_wear",f]
-    cgmupload["total_sensor_readings",f] <-
-      as.numeric(length(which(!is.na(table$Sensor.Glucose..mg.dL.))))
-    cgmupload["average_sensor",f] <-
-      mean(table$Sensor.Glucose..mg.dL.[which
-                                        (!is.na(table$Sensor.Glucose..mg.dL.))])
-    cgmupload["q1_sensor",f] <-
-      as.numeric(summary(table$Sensor.Glucose..mg.dL.[which(
-        !is.na(table$Sensor.Glucose..mg.dL.))])[2])
-
-    cgmupload["median_sensor",f] <-
-      as.numeric(summary(table$Sensor.Glucose..mg.dL.[which(
-        !is.na(table$Sensor.Glucose..mg.dL.))])[3])
-
-    cgmupload["q3_sensor",f] <-
-      as.numeric(summary(table$Sensor.Glucose..mg.dL.[which(
-        !is.na(table$Sensor.Glucose..mg.dL.))])[5])
-
-    cgmupload["standard_deviation",f] <-
-      stats::sd(table$Sensor.Glucose..mg.dL.[which
-                                      (!is.na(table$Sensor.Glucose..mg.dL.))])
-    cgmupload["min_sensor",f] <-
-      min(table$Sensor.Glucose..mg.dL.[which
-                                       (!is.na(table$Sensor.Glucose..mg.dL.))])
-    cgmupload["max_sensor",f] <-
-      max(table$Sensor.Glucose..mg.dL.[which
-                                       (!is.na(table$Sensor.Glucose..mg.dL.))])
-
+# Read in data, create results dataframe. The dataframe has one column for each 
+# file in the input directory, and is desgined to be uploaded to REDCap. 
+  files <- base::list.files(path = inputdirectory,full.names = TRUE)
+  cgmupload <- base::data.frame(base::matrix(nrow = 0,ncol = base::length(files)))
+  base::colnames(cgmupload) <- base::rep("Record",base::length(files))
+# Define the order in which lubridate parses dates.  
+  dateparseorder <- c("mdy HM","mdy HMS","mdY HM","mdY HMS","dmy HM","dmy HMS",
+                      "dmY HM","dmY HMS","Ymd HM","Ymd HMS","ymd HM","ymd HMS",
+                      "Ydm HM","Ydm HMS","ydm HM","ydm HMS")
+# Iterate through the input directory and calculate CGM variables for each file.
+# The cgmvariables() function only works on CSV files that have been cleaned by 
+# cleandata(), or that have been manually edited and fit the format of
+# cleandata() output. 
+  for (f in 1:base::length(files)) {    
+# Basic variables
+    table <- utils::read.csv(files[f],stringsAsFactors = FALSE)
+    
+    cgmupload["subject_id",f] <- table$subjectid[1]
+# Format columns.    
+    table$timestamp <- 
+      base::as.POSIXct(lubridate::parse_date_time(table$timestamp,
+                                                  dateparseorder,tz = "UTC"))
+    table$sensorglucose <- base::as.numeric(table$sensorglucose)
+    interval <- pracma::Mode(base::diff(base::as.numeric(table$timestamp)))
+    cgmupload["date_cgm_placement", f] <- 
+      as.character(as.Date(table$subjectid[2],format = "%m/%d/%Y %T"))
+    table$subjectid[2] <- 
+      base::as.POSIXct(lubridate::parse_date_time(table$subjectid[2],
+                                                  dateparseorder),tz = "UTC")
+    table$subjectid[3] <- 
+      base::as.POSIXct(lubridate::parse_date_time(table$subjectid[3],
+                                                  dateparseorder),tz = "UTC")
+    
+    totaltime <- as.numeric(table$subjectid[3])-as.numeric(table$subjectid[2])
+    cgmupload["percent_cgm_wear",f] <- 
+      round(((length(table$sensorglucose)/(totaltime/interval))*100),2)
+    
+    table <- table[,-c(1)]
+    table <- table[stats::complete.cases(table),]
+    
+    cgmupload["num_days_good_data",f] <- 
+      base::round(base::length(table$sensorglucose)/(86400/interval))
+    cgmupload["total_sensor_readings",f] <- 
+      base::as.numeric(base::length(base::which(!is.na(table$sensorglucose))))
+    cgmupload["average_sensor",f] <- 
+      base::mean(table$sensorglucose[base::which(!is.na(table$sensorglucose))])
+    cgmupload["estimated_a1c",f] <- 
+      base::round((46.7 + (base::mean(table$sensorglucose[
+        base::which(!is.na(table$sensorglucose))]))) / 28.7,digits = 1)
+    cgmupload["q1_sensor",f] <- 
+      base::as.numeric(base::summary(table$sensorglucose[
+        base::which(!is.na(table$sensorglucose))])[2])
+    cgmupload["median_sensor",f] <- 
+      base::as.numeric(base::summary(table$sensorglucose[
+        base::which(!is.na(table$sensorglucose))])[3])
+    cgmupload["q3_sensor",f] <- 
+      base::as.numeric(base::summary(table$sensorglucose[
+        base::which(!is.na(table$sensorglucose))])[5])
+    cgmupload["standard_deviation",f] <- 
+      stats::sd(table$sensorglucose[base::which(!is.na(table$sensorglucose))])
+    cgmupload["cv",f] <- 
+      (stats::sd(table$sensorglucose[base::which(!is.na(table$sensorglucose))]))/
+      base::mean(table$sensorglucose[base::which(!is.na(table$sensorglucose))])
+    cgmupload["min_sensor",f] <- 
+      base::min(table$sensorglucose[base::which(!is.na(table$sensorglucose))])
+    cgmupload["max_sensor",f] <- 
+      base::max(table$sensorglucose[base::which(!is.na(table$sensorglucose))])
+    
 # Excursions over 120 calculations.
-    BGover120 <-
-      as.numeric(table$Sensor.Glucose..mg.dL.
-                 [which(!is.na(table$Sensor.Glucose..mg.dL.))],length = 1)
-    BGover120[BGover120 < 120] <- NA
-    peaks <- 0
-    notna <- 0
-    for (i in 1:length(BGover120)) {
-      if (is.na(BGover120[i]) && notna == 0) {
-        next()
-      } else if (!is.na(BGover120[i]) && notna == 0 && !is.na(BGover120[i+1])) {
-        notna <- 1
-        peaks <- peaks + 1
-      } else if (!is.na(BGover120[i]) && notna == 1) {
-        next()
-      } else if (is.na(BGover120[i]) && notna == 1) {
-        notna <- 0
-      }
-    }
-    cgmupload["excursions_over_120",f] <- as.numeric(peaks)
-    cgmupload["min_spent_over_120",f] <-
-      as.numeric((length(BGover120[which(!is.na(BGover120))]) - peaks) * 5)
-    cgmupload["percent_time_over_120",f] <-
-      (as.numeric(cgmupload["min_spent_over_120",f]) /
-         (as.numeric(cgmupload["total_sensor_readings",f])*5)) * 100
-
+    BGover120 <- 
+      base::as.numeric(table$sensorglucose[base::which(!is.na(table$sensorglucose))],
+                       length = 1)
+    BGover120[BGover120 < 120] <- 0
+    BGover120[BGover120 >= 120] <- 1
+    BG120.rle <- base::rle(BGover120)
+    excursions120 <- 
+      base::as.numeric(BG120.rle$lengths[base::which(BG120.rle$values == 1)])
+    
+    cgmupload["excursions_over_120",f] <- 
+      base::length(base::which(excursions120 > ((aboveexcursionlength * 60)/interval)))
+    cgmupload["min_spent_over_120",f] <- base::sum(BGover120) * (interval/60)
+    cgmupload["percent_time_over_120",f] <- 
+      ((base::sum(BGover120) * (interval/60))/
+         (base::length(table$sensorglucose) * (interval/60))) * 100
+    
 # Over 140.
-    BGover140 <- as.numeric(table$Sensor.Glucose..mg.dL.[
-      which(!is.na(table$Sensor.Glucose..mg.dL.))],length = 1)
-    BGover140[BGover140 < 140] <- NA
-    peaks <- 0
-    notna <- 0
-    for (i in 1:length(BGover140)) {
-      if (is.na(BGover140[i]) && notna == 0) {
-        next()
-      } else if (!is.na(BGover140[i]) && notna == 0 && !is.na(BGover140[i+1])) {
-        notna <- 1
-        peaks <- peaks + 1
-      } else if (!is.na(BGover140[i]) && notna == 1) {
-        next()
-      } else if (is.na(BGover140[i]) && notna == 1) {
-        notna <- 0
-      }
-    }
-    cgmupload["excursions_over_140",f] <- as.numeric(peaks)
-    cgmupload["min_spent_over_140",f] <-
-      as.numeric((length(BGover140[which(!is.na(BGover140))]) - peaks) * 5)
-    cgmupload["percent_time_over_140",f] <-
-      (as.numeric(cgmupload["min_spent_over_140",f]) /
-         (as.numeric(cgmupload["total_sensor_readings",f])*5)) * 100
-
-    cgmupload["avg_excur_over_140_per_day",f] <- as.numeric(cgmupload[
-      "excursions_over_140",f])/as.numeric(cgmupload["num_days_cgm_wear",f])
-
+    BGover140 <- 
+      base::as.numeric(table$sensorglucose[base::which(!is.na(table$sensorglucose))],
+                 length = 1)
+    BGover140[BGover140 < 140] <- 0
+    BGover140[BGover140 >= 140] <- 1
+    BG140.rle <- base::rle(BGover140)
+    excursions140 <- 
+      base::as.numeric(BG140.rle$lengths[base::which(BG140.rle$values == 1)])
+    
+    cgmupload["excursions_over_140",f] <- 
+      base::length(base::which(excursions140 > ((aboveexcursionlength * 60)/interval)))
+    cgmupload["min_spent_over_140",f] <- base::sum(BGover140) * (interval/60)
+    cgmupload["percent_time_over_140",f] <- 
+      ((base::sum(BGover140) * (interval/60))/
+         (base::length(table$sensorglucose) * (interval/60))) * 100
+    
+# Over 180.
+    BGover180 <- 
+      base::as.numeric(table$sensorglucose[base::which(!is.na(table$sensorglucose))],
+                 length = 1)
+    BGover180[BGover180 < 180] <- 0
+    BGover180[BGover180 >= 180] <- 1
+    BG180.rle <- base::rle(BGover180)
+    excursions180 <- 
+      base::as.numeric(BG180.rle$lengths[base::which(BG180.rle$values == 1)])
+    
+    cgmupload["excursions_over_180",f] <- 
+      base::length(base::which(excursions180 > ((aboveexcursionlength * 60)/interval)))
+    cgmupload["min_spent_over_180",f] <- base::sum(BGover180) * (interval/60)
+    cgmupload["percent_time_over_180",f] <- 
+      ((base::sum(BGover180) * (interval/60))/
+         (base::length(table$sensorglucose) * (interval/60))) * 100
+    
 # Over 200.
-    BGover200 <- as.numeric(table$Sensor.Glucose..mg.dL.[
-      which(!is.na(table$Sensor.Glucose..mg.dL.))],length = 1)
-    BGover200[BGover200 < 200] <- NA
-    peaks <- 0
-    notna <- 0
-    for (i in 1:length(BGover200)) {
-      if (is.na(BGover200[i]) && notna == 0) {
-        next()
-      } else if (!is.na(BGover200[i]) && notna == 0 && !is.na(BGover200[i+1])) {
-        notna <- 1
-        peaks <- peaks + 1
-      } else if (!is.na(BGover200[i]) && notna == 1) {
-        next()
-      } else if (is.na(BGover200[i]) && notna == 1) {
-        notna <- 0
-      }
-    }
-    cgmupload["excursions_over_200",f] <- as.numeric(peaks)
-    cgmupload["min_spent_over_200",f] <-
-      as.numeric((length(BGover200[which(!is.na(BGover200))]) - peaks) * 5)
-    cgmupload["percent_time_over_200",f] <-
-      (as.numeric(cgmupload["min_spent_over_200",f]) /
-         (as.numeric(cgmupload["total_sensor_readings",f])*5)) * 100
+    BGover200 <- 
+      base::as.numeric(table$sensorglucose[base::which(!is.na(table$sensorglucose))],
+                 length = 1)
+    BGover200[BGover200 < 200] <- 0
+    BGover200[BGover200 >= 200] <- 1
+    BG200.rle <- base::rle(BGover200)
+    excursions200 <- 
+      base::as.numeric(BG200.rle$lengths[base::which(BG200.rle$values == 1)])
+    
+    cgmupload["excursions_over_200",f] <- 
+      base::length(base::which(excursions200 > ((aboveexcursionlength * 60)/interval)))
+    cgmupload["min_spent_over_200",f] <- base::sum(BGover200) * (interval/60)
+    cgmupload["percent_time_over_200",f] <- 
+      ((base::sum(BGover200) * (interval/60))/
+         (base::length(table$sensorglucose) * (interval/60))) * 100
 
-    cgmupload["avg_excur_over_200_per_day",f] <-
-      as.numeric(cgmupload["excursions_over_200",f]) /
-      as.numeric(cgmupload["num_days_cgm_wear",f])
-
+    cgmupload["avg_excur_over_140_per_day",f] <- 
+      as.numeric(cgmupload["excursions_over_140",f])/
+      as.numeric(cgmupload["num_days_good_data",f])
+    cgmupload["avg_excur_over_200_per_day",f] <- 
+      as.numeric(cgmupload["excursions_over_200",f])/
+      as.numeric(cgmupload["num_days_good_data",f])
+        
+# Over 250.
+    BGover250 <- 
+      base::as.numeric(table$sensorglucose[base::which(!is.na(table$sensorglucose))],
+                 length = 1)
+    BGover250[BGover250 < 250] <- 0
+    BGover250[BGover250 >= 250] <- 1
+    BG250.rle <- base::rle(BGover250)
+    excursions250 <- 
+      base::as.numeric(BG250.rle$lengths[base::which(BG250.rle$values == 1)])
+    
+    cgmupload["excursions_over_250",f] <- 
+      base::length(base::which(excursions250 > ((aboveexcursionlength * 60)/interval)))
+    cgmupload["min_spent_over_250",f] <- base::sum(BGover250) * (interval/60)
+    cgmupload["percent_time_over_250",f] <- 
+      ((base::sum(BGover250) * (interval/60))/
+         (base::length(table$sensorglucose) * (interval/60))) * 100
+    
+# Under 54.
+    BGunder54 <- 
+      base::as.numeric(table$sensorglucose[base::which(!is.na(table$sensorglucose))],
+                 length = 1)
+    BGunder54[BGunder54 <= 54] <- 1
+    BGunder54[BGunder54 > 54] <- 0
+    BG54.rle <- base::rle(BGunder54)
+    excursions54 <- 
+      base::as.numeric(BG54.rle$lengths[base::which(BG54.rle$values == 1)])
+    
+    cgmupload["excursions_under_54",f] <- 
+      base::length(base::which(excursions54 > ((belowexcursionlength * 60)/interval)))
+    cgmupload["min_spent_under_54",f] <- base::sum(BGunder54) * (interval/60)
+    cgmupload["percent_time_under_54",f] <- 
+      ((base::sum(BGunder54) * (interval/60))/
+         (base::length(table$sensorglucose) * (interval/60))) * 100
+    
 # Under 60.
-    BGunder60 <- as.numeric(table$Sensor.Glucose..mg.dL.[
-      which(!is.na(table$Sensor.Glucose..mg.dL.))],length = 1)
-    BGunder60[BGunder60 > 60] <- NA
-    peaks <- 0
-    notna <- 0
-    for (i in 1:length(BGunder60)) {
-      if (is.na(BGunder60[i]) && notna == 0) {
-        next()
-      } else if (!is.na(BGunder60[i]) && notna == 0 && !is.na(BGunder60[i+1])) {
-        notna <- 1
-        peaks <- peaks + 1
-      } else if (!is.na(BGunder60[i]) && notna == 1) {
-        next()
-      } else if (is.na(BGunder60[i]) && notna == 1) {
-        notna <- 0
-      }
-    }
-    cgmupload["excursions_under_60",f] <- as.numeric(peaks)
-    cgmupload["min_spent_under_60",f] <-
-      as.numeric((length(BGunder60[which(!is.na(BGunder60))]) - peaks) * 5)
-    cgmupload["percent_time_under_60",f] <-
-      (as.numeric(cgmupload["min_spent_under_60",f]) /
-         (as.numeric(cgmupload["total_sensor_readings",f])*5)) * 100
-
-    cgmupload["avg_excur_under_60_per_day",f] <-
-      as.numeric(cgmupload["excursions_under_60",f]) /
-      as.numeric(cgmupload["num_days_cgm_wear",f])
-
+    BGunder60 <- 
+      base::as.numeric(table$sensorglucose[base::which(!is.na(table$sensorglucose))],
+                 length = 1)
+    BGunder60[BGunder60 <= 60] <- 1
+    BGunder60[BGunder60 > 60] <- 0
+    BG60.rle <- base::rle(BGunder60)
+    excursions60 <- 
+      base::as.numeric(BG60.rle$lengths[base::which(BG60.rle$values == 1)])
+    
+    cgmupload["excursions_under_60",f] <- 
+      base::length(base::which(excursions60 > ((belowexcursionlength * 60)/interval)))
+    cgmupload["min_spent_under_60",f] <- base::sum(BGunder60) * (interval/60)
+    cgmupload["percent_time_under_60",f] <- 
+      ((base::sum(BGunder60) * (interval/60))/
+         (base::length(table$sensorglucose) * (interval/60))) * 100
+    
 # Under 70.
-    BGunder70 <- as.numeric(table$Sensor.Glucose..mg.dL.[
-      which(!is.na(table$Sensor.Glucose..mg.dL.))],length = 1)
-    BGunder70[BGunder70 > 70] <- NA
-    peaks <- 0
-    notna <- 0
-    for (i in 1:length(BGunder70)) {
-      if (is.na(BGunder70[i]) && notna == 0) {
-        next()
-      } else if (!is.na(BGunder70[i]) && notna == 0 && !is.na(BGunder70[i+1])) {
-        notna <- 1
-        peaks <- peaks + 1
-      } else if (!is.na(BGunder70[i]) && notna == 1) {
-        next()
-      } else if (is.na(BGunder70[i]) && notna == 1) {
-        notna <- 0
-      }
-    }
-    cgmupload["excursions_under_70",f] <- as.numeric(peaks)
-    cgmupload["min_spent_under_70",f] <-
-      as.numeric((length(BGunder70[which(!is.na(BGunder70))]) - peaks) * 5)
-    cgmupload["percent_time_under_70",f] <-
-      (as.numeric(cgmupload["min_spent_under_70",f]) /
-         (as.numeric(cgmupload["total_sensor_readings",f])*5)) * 100
-
-    cgmupload["avg_excur_under_70_per_day",f] <-
-      as.numeric(cgmupload["excursions_under_70",f]) /
-      as.numeric(cgmupload["num_days_cgm_wear",f])
-
+    BGunder70 <- 
+      base::as.numeric(table$sensorglucose[base::which(!is.na(table$sensorglucose))],
+                 length = 1)
+    BGunder70[BGunder70 <= 70] <- 1
+    BGunder70[BGunder70 > 70] <- 0
+    BG70.rle <- base::rle(BGunder70)
+    excursions70 <- 
+      base::as.numeric(BG70.rle$lengths[base::which(BG70.rle$values == 1)])
+    
+    cgmupload["excursions_under_70",f] <- 
+      base::length(base::which(excursions70 > ((belowexcursionlength * 60)/interval)))
+    cgmupload["min_spent_under_70",f] <- base::sum(BGunder70) * (interval/60)
+    cgmupload["percent_time_under_70",f] <- 
+      ((base::sum(BGunder70) * (interval/60))/
+         (base::length(table$sensorglucose) * (interval/60))) * 100
+    
 # Find daytime AUC.
-    times <- table$Time[which(!is.na(table$Time))]
-    hours <- as.numeric(substr(times,1,2))
-    daytime_indexes <- which(hours %in% 6:22)
-    daytime_sensor <- table$Sensor.Glucose..mg.dL.[daytime_indexes]
-    daytime_times <- table$Timestamp[daytime_indexes]
-    xaxis <- seq(from = 0, length.out = length(daytime_times),by = 5)
-
+    daytime_indexes <- 
+      base::which(base::as.numeric(base::format(table$timestamp,"%H")) %in% 6:22)
+    daytime_sensor <- table$sensorglucose[daytime_indexes]
+    xaxis <- 
+      base::seq(from = 0, length.out = base::length(daytime_sensor),by = (interval / 60))
+    
 # Remove NAs if they are present.
-    xaxis[which(is.na(daytime_sensor))] <- NA
+    xaxis[base::which(is.na(daytime_sensor))] <- NA
     xaxis <- xaxis[!is.na(xaxis)]
     daytime_sensor <- daytime_sensor[!is.na(daytime_sensor)]
     aucs <- pracma::cumtrapz(xaxis,daytime_sensor)
-    cgmupload["daytime_auc",f] <- aucs[length(daytime_sensor)]
-
+    cgmupload["daytime_auc",f] <- aucs[base::length(daytime_sensor)]
+    
 # Other daytime sensor glucose variables.
-    cgmupload["daytime_avg_sensor_glucose",f] <- mean(daytime_sensor)
+    cgmupload["daytime_avg_sensor_glucose",f] <- base::mean(na.omit(daytime_sensor))
     cgmupload["daytime_min_sensor_glucose",f] <- min(daytime_sensor)
     cgmupload["daytime_max_sensor_glucose",f] <- max(daytime_sensor)
     cgmupload["daytime_sd",f] <- stats::sd(daytime_sensor)
-
+    
 # Nighttime AUC.
-    nighttime_indexes <- which(hours %in% c(23,24,0:5))
-    nighttime_sensor <- table$Sensor.Glucose..mg.dL.[nighttime_indexes]
-    nighttime_times <- table$Timestamp[nighttime_indexes]
-    xaxis <- seq(from = 0, length.out = length(nighttime_times),by = 5)
-
+    nighttime_indexes <- 
+      base::which(base::as.numeric(base::format(table$timestamp,"%H")) %in% c(23,24,0:5))
+    nighttime_sensor <- table$sensorglucose[nighttime_indexes]
+    xaxis <- 
+      base::seq(from = 0, length.out = base::length(nighttime_indexes),by = (interval / 60))
+    
+# Day/night ratio.
+    cgmupload["day_night_sensor_ratio",f] <- 
+      round(length(daytime_sensor)/length(nighttime_sensor),1)
+    
 # Remove NAs if they are present.
-    xaxis[which(is.na(nighttime_sensor))] <- NA
+    xaxis[base::which(is.na(nighttime_sensor))] <- NA
     xaxis <- xaxis[!is.na(xaxis)]
     nighttime_sensor <- nighttime_sensor[!is.na(nighttime_sensor)]
     aucs <- pracma::cumtrapz(xaxis,nighttime_sensor)
-    cgmupload["nighttime_auc",f] <- aucs[length(nighttime_sensor)]
-
+    cgmupload["nighttime_auc",f] <- aucs[base::length(nighttime_sensor)]
+    
 # Other nighttime sensor glucose variables.
-    cgmupload["nighttime_avg_sens_glucose",f] <- mean(nighttime_sensor)
+    cgmupload["nighttime_avg_sens_glucose",f] <- 
+      base::mean(na.omit(nighttime_sensor))
     cgmupload["nighttime_min_sens_glucose",f] <- min(nighttime_sensor)
     cgmupload["nighttime_max_sens_glucose",f] <- max(nighttime_sensor)
     cgmupload["nighttime_sd",f] <- stats::sd(nighttime_sensor)
-
+    
 # Total AUC.
-    sensorBG <- as.numeric(table$Sensor.Glucose..mg.dL.,length = 1)
-    xaxis <- seq(from = 0, length.out = length(sensorBG),by = 5)
-
+    sensorBG <- base::as.numeric(table$sensorglucose,length = 1)
+    xaxis <- 
+      base::seq(from = 0, length.out = base::length(sensorBG),by = (interval / 60))
+    
 # Remove NAs if they are present.
-    xaxis[which(is.na(sensorBG))] <- NA
+    xaxis[base::which(is.na(sensorBG))] <- NA
     xaxis <- xaxis[!is.na(xaxis)]
     sensorBG <- sensorBG[!is.na(sensorBG)]
     aucs <- pracma::cumtrapz(xaxis,sensorBG)
-    cgmupload["total_auc",f] <- aucs[length(sensorBG)]
-
+    cgmupload["total_auc",f] <- aucs[base::length(sensorBG)]
+    
     cgmupload["average_auc_per_day",f] <-
-      as.numeric(cgmupload["total_auc",f]) /
-      as.numeric(cgmupload["num_days_cgm_wear",f])
-
+      base::as.numeric(cgmupload["total_auc",f]) /
+      base::as.numeric(cgmupload["num_days_good_data",f])
+    
 # AUC over 180.
-    sensorover180 <- table$Sensor.Glucose..mg.dL.
+    sensorover180 <- table$sensorglucose
     sensorover180 <- sensorover180[sensorover180 >= 180]
     sensorover180 <- sensorover180[!is.na(sensorover180)]
-    xaxis <- seq(from = 0, length.out = length(sensorover180),by = 5)
-
+    xaxis <- 
+      base::seq(from = 0, length.out = base::length(sensorover180),by = (interval / 60))
+    
 # Calculate cumulative AUC, and subtract recatangle where length = 180 &
 # width = minutes.
-    if (length(sensorover180) > 1) {
+    if (base::length(sensorover180) > 1) {
       aucs <- pracma::cumtrapz(xaxis,sensorover180)
-      aucs <- (aucs[length(sensorover180)]) - (xaxis[length(xaxis)] * 180)
+      aucs <- 
+        (aucs[base::length(sensorover180)]) - (xaxis[base::length(xaxis)] * 180)
       cgmupload["auc_over_180",f] <- aucs
     } else {
       cgmupload["auc_over_180",f] <- 0
     }
-
     cgmupload["average_auc_180",f] <-
-      as.numeric(cgmupload["auc_over_180",f]) /
-      as.numeric(cgmupload["num_days_cgm_wear",f])
+      base::as.numeric(cgmupload["auc_over_180",f]) /
+      base::as.numeric(cgmupload["num_days_good_data",f])
+    
+# Calculate MAGE.
+# Smooth data using an exponentially weighted moving average, calculate SD of 
+# unsmoothed data.  
+    table$smoothed <- 
+      base::as.numeric(zoo::rollapply(zoo::zoo(table$sensorglucose), 9, function(x) c(1,2,4,8,16,8,4,2,1) %*% (x / 46),fill = NA))
+    table$smoothed[1:4] <- base::mean(na.omit(table$sensorglucose[1:4]))
+    table$smoothed[(base::length(table$smoothed)-3):base::length(table$smoothed)] <- 
+      base::mean(table$sensorglucose[(base::length(table$sensorglucose)-3):base::length(table$sensorglucose)])
+    
+    sd <- stats::sd(table$sensorglucose)
+# Identify turning points, peaks, and nadirs.
+    tpoints <- pastecs::turnpoints(table$smoothed)
+    peaks <- base::which(tpoints[["peaks"]] == TRUE)
+    pits <- base::which(tpoints[["pits"]] == TRUE)
+# Calculate the difference between each nadir and its following peak. If the     
+# data starts on a peak, remove it. Otherwise remove the final pit to create an 
+# even number of pits and peaks.
+    if (tpoints[["firstispeak"]] == TRUE && base::length(peaks) != base::length(pits)) {
+      peaks <- peaks[2:base::length(peaks)]
+    } else if (tpoints[["firstispeak"]] == FALSE && 
+               base::length(peaks) != base::length(pits)) {
+      pits <- pits[1:(base::length(pits)-1)]
+    }
+    differences <- table$sensorglucose[peaks] - table$sensorglucose[pits]
+    
+# Calculate the average of the differences greater than the entire dataset SD, 2SD, etc.
+    if (magedef == "1sd") {
+      cgmupload["r_mage",f] <- 
+        base::mean(na.omit(differences[base::which(differences > sd)]))
+    } else if (magedef == "1.5sd") {
+      cgmupload["r_mage",f] <- 
+        base::mean(na.omit(differences[base::which(differences > (sd * 1.5))]))
+    } else if ( magedef == "2sd") {
+      cgmupload["r_mage",f] <- 
+        base::mean(na.omit(differences[base::which(differences > (sd * 2))]))
+    } else {
+      cgmupload["r_mage",f] <- 
+        base::mean(na.omit(differences[base::which(differences > magedef)]))
+    }
+    
+# MODD.
+    table$time <- lubridate::round_date(table$timestamp,"5 minutes")
+    table$time <- base::strftime(table$time, format = "%H:%M",tz = "UTC")
+    moddtable <- 
+      base::data.frame(base::matrix(ncol = 2,nrow = base::length(unique(table$time))))
+    base::colnames(moddtable) <- c("time","mean_differences")
+    moddtable$time <- base::unique(table$time)
+# For each time, calculate differences (absolute values) and average them.   
+    for (r in 1:nrow(moddtable)) {
+      moddtable$mean_differences[r] <- 
+        base::mean(base::abs(base::diff(table$sensorglucose[
+          base::which(table$time == moddtable$time[r])])))
+    }
+# Average the averages.
+    cgmupload["modd",f] <- base::mean(na.omit(moddtable$mean_differences))
+    
+# LBGI and HBGI (based on dc1386 appendix)
+    a <- 1.084
+    b <- 5.381
+    y <- 1.509
+    table$gluctransform <- y * ((base::log(table$sensorglucose)^a)-b)
+    table$rBG <- 10 * (table$gluctransform^2)
+    rl <- table$rBG[base::which(table$gluctransform < 0)]
+    rh <- table$rBG[base::which(table$gluctransform > 0)]
+    cgmupload["lbgi",f] <- base::mean(na.omit(rl))
+    cgmupload["hbgi",f] <- base::mean(na.omit(rh))
   }
-
+  
 # Write file.
-  cgmupload <- cgmupload[-1,]
-  cgmupload[is.na(cgmupload)] <- ""
-  cgmupload[cgmupload == "NaN"] <- ""
-  cgmupload <- cbind("Variable / Field Name" = rownames(cgmupload),cgmupload)
-  filename <- paste(outputdirectory,"/",outputname,".csv",sep = "")
+  cgmupload <- 
+    base::cbind("Variable / Field Name" = rownames(cgmupload),cgmupload)
+  filename <- base::paste(outputdirectory,"/",outputname,".csv",sep = "")
   utils::write.csv(cgmupload, file = filename,row.names = FALSE)
 }

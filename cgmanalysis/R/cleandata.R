@@ -3,8 +3,8 @@
 #' This function returns cleaned CGM files for analysis. Files must not be 
 #' edited, and should be saved in the original format. If any files need to be 
 #' edited manually, please save them in the format specified by the 
-#' cgmvariables() function. If this function is unable to read your CGM data, 
-#' it may help to save your data in the format above. 
+#' cgmvariables() function. If this function is unable to read your unedited 
+#' CGM data, it may help to save your data in the format above. 
 #' 
 #' Because Diasend data is exported in an Excel document containing multiple 
 #' tabs, the CGM data must be in the first tab in order to be read effectively.
@@ -17,13 +17,17 @@
 #' containing the gap(s). The tail end of the data will also be trimmed to 
 #' ensure the timeseries is in discrete 24 hour chunks.
 #' @param gapfill If set to TRUE (and if removegaps = TRUE), gaps smaller than 
-#' or equal to maximum gap will be interpolated rather than removed.
+#' or equal to maximumgap will be interpolated rather than removed.
 #' @param maximumgap Allows the user to determine the longest data gap (in 
 #' minutes) that will be interpolated. 
 #' @import pracma,lubridate,zoo,tools,gdata,readr
-#' @usage 
-#' @examples 
-#' @return 
+#' @usage cleandata(inputdirectory,
+#' outputdirectory = tempdir(),
+#' removegaps = TRUE,
+#' gapfill = TRUE,
+#' maxgap = 20)
+#' @examples
+#' @return
 #' @export
 
 cleandata <- function(inputdirectory,
@@ -144,8 +148,12 @@ cleandata <- function(inputdirectory,
     table <- table[base::order(table$timestamp),]
 
 # ***Make record start time ignore "PULSE INIT" etc. for iPro***
-    recordstart <- base::strftime(table$timestamp[min(which(!is.na(table$sensorglucose)))],format = "%m/%d/%Y %T")
-    removaltime <- base::strftime(table$timestamp[length(table$timestamp)],format = "%m/%d/%Y %T")
+    recordstart <- 
+      base::strftime(table$timestamp[min(which(!is.na(table$sensorglucose)))],
+                     format = "%m/%d/%Y %T")
+    removaltime <- 
+      base::strftime(table$timestamp[length(table$timestamp)],
+                     format = "%m/%d/%Y %T")
     
 # Set interval based on mode of timestamp diff.
     interval <- pracma::Mode(base::diff(base::as.numeric(table$timestamp)))
@@ -163,7 +171,8 @@ cleandata <- function(inputdirectory,
 # Determine which row contains the timestamp closest to hour4, remove all rows 
 # up to and including that row.    
       table <- 
-        table[-c(1:(which(abs(as.numeric(table$timestamp) - hour4) == min(abs(as.numeric(table$timestamp) - hour4)))[1])),]
+        table[-c(1:(which(abs(as.numeric(table$timestamp) - hour4) == 
+                            min(abs(as.numeric(table$timestamp) - hour4)))[1])),]
       
 # Fill in small sensor glucose data gaps. 
       if (gapfill == TRUE) {
