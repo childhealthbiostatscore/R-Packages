@@ -51,12 +51,12 @@ cgmreport <- function(inputdirectory,
                                dateparseorder,tz = "UTC"))
   aggregateAGPdata$hour <- lubridate::round_date(aggregateAGPdata$timestamp,"hour")
   aggregateAGPdata$time <- 
-    as.POSIXlt(strftime(aggregateAGPdata$timestamp,format = "%H:%M"),
+    as.POSIXct(strftime(aggregateAGPdata$timestamp,format = "%H:%M"),
                format = "%H:%M")
   aggregateAGPdata$hourmin <- 
     lubridate::round_date(aggregateAGPdata$timestamp,"10 minutes")
   aggregateAGPdata$hourmin <- 
-    as.POSIXlt(strftime(aggregateAGPdata$hourmin,format = "%H:%M"),
+    as.POSIXct(strftime(aggregateAGPdata$hourmin,format = "%H:%M"),
                format = "%H:%M")
  
 # Find 25%ile, median, and 75%ile blood glucose for each hour, store in new table.

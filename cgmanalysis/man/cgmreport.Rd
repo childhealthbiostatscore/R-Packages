@@ -12,10 +12,17 @@ data to be analyzed.}
 
 \item{outputdirectory}{The directory where plot PDF files should be written.}
 }
+\value{
+Aggregate and per subject AGP reports based on all of the cleaned CGM 
+data in the input directory.
+}
 \description{
 This function takes a directory of cleaned CGM data and generates two 
 aggregate AGPs for all of the files combined. One aggregate AGP is produced 
 using Tukey smoothing, and the other uses ggplot's built in LOESS smoothing 
 function. The function also produces an AGP plot with each unique subject 
 plotted individually on the same graph (using LOESS smoothing).
+}
+\examples{
+cgmreport(system.file("extdata","Cleaned",package = "cgmanalysis"))
 }

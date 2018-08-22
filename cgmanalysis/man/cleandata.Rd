@@ -38,3 +38,7 @@ CGM data, it may help to save your data in the format above.
 Because Diasend data is exported in an Excel document containing multiple 
 tabs, the CGM data must be in the first tab in order to be read effectively.
 }
+\examples{
+\dontrun{cleandata(system.file("extdata", "De-identified",
+package = "cgmanalysis"))}
+}

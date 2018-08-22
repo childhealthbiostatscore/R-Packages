@@ -45,3 +45,6 @@ the second (see example files). The names of the columns must be "subjectid"
 "timestamp" and "sensorglucose" (without quotes) respectively. Files can be 
 cleaned and formatted using this package's cleandata() function.
 }
+\examples{
+cgmvariables(system.file("extdata","Cleaned",package = "cgmanalysis"))
+}
