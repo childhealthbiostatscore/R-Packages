@@ -38,7 +38,6 @@ cleandata <- function(inputdirectory,
 
 # Set system locale to read all characters. Read in file list. Creat output 
 # directory.
-  base::Sys.setlocale("LC_ALL", "C")
   files <- base::list.files(path = inputdirectory,full.names = TRUE)
   dir.create(outputdirectory,showWarnings = FALSE)
   dateparseorder <- c("mdy HM","mdy HMS","mdY HM","mdY HMS","dmy HM","dmy HMS",
@@ -107,11 +106,16 @@ cleandata <- function(inputdirectory,
       table <- table[,c('timestamp','Sensor Glucose (mg/dL)')]
       base::colnames(table) <- c('timestamp','sensorglucose')
     } else if (cgmtype == "dexcom") {
-      id <- table$Patient.Info[3]
-      table <- table[,c('Timestamp..YYYY.MM.DDThh.mm.ss.',
-                        'Glucose.Value..mg.dL.')]
-      base::colnames(table) <- c('timestamp','sensorglucose')
-      table$timestamp <- base::sub("T"," ",table$timestamp)
+      if ('Glucose.Value..mg.dL.' %in% colnames(table)) {
+        id <- table$Patient.Info[3]
+        table <- table[,c('Timestamp..YYYY.MM.DDThh.mm.ss.','Glucose.Value..mg.dL.')]
+        base::colnames(table) <- c('timestamp','sensorglucose')
+        table$timestamp <- base::sub("T"," ",table$timestamp)
+      } else {
+        id <- table$PatientInfoValue[1]
+        table <- table[,c("GlucoseDisplayTime","GlucoseValue")]
+        base::colnames(table) <- c('timestamp','sensorglucose')
+      }
     } else if (cgmtype == "libre") {
       id <- table[1,1]
       base::colnames(table) <- table[2,]
