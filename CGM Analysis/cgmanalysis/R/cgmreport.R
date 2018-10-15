@@ -110,7 +110,7 @@ cgmreport <- function(inputdirectory,
   AGPloess <- 
     ggplot2::ggplot(aggregateAGPdata, ggplot2::aes(x = aggregateAGPdata$time, y = aggregateAGPdata$sensorglucose))+
     ggplot2::geom_smooth(ggplot2::aes(y = aggregateAGPdata$sensorglucose,color = aggregateAGPdata$subjectid),se = FALSE)+
-    ggplot2::geom_point(ggplot2::aes(y = aggregateAGPdata$sensorglucose, color = aggregateAGPdata$subjectid),shape = ".",alpha = 0.3)+
+    ggplot2::geom_point(ggplot2::aes(y = aggregateAGPdata$sensorglucose, color = aggregateAGPdata$subjectid),shape = ".")+
     ggplot2::ggtitle("Daily Overlay Per Subject (LOESS Smoothing)")+
     ggplot2::ylab("Sensor BG (mg/dL)")+
     ggplot2::xlab("Time (hour)")+
