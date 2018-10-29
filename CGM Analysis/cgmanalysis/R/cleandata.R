@@ -51,7 +51,6 @@ cleandata <- function(inputdirectory,
     if (ext == "txt") {
       table <- utils::read.table(files[f],
                                  sep = "\t",
-                                 encoding = "UTF-16LE",
                                  skipNul = TRUE,
                                  header = TRUE,
                                  stringsAsFactors = FALSE,
@@ -74,6 +73,8 @@ cleandata <- function(inputdirectory,
       cgmtype <- "diasend"
     } else if (base::ncol(table) == 18) {
       cgmtype <- "libre"
+    } else if (base::ncol(table) == 4) {
+      cgmtype <- "libre pro"
     } else if (base::ncol(table) == 13 | base::ncol(table) == 14) {
       cgmtype <- "dexcom"
     } else if (base::ncol(table) == 47) {
@@ -121,6 +122,12 @@ cleandata <- function(inputdirectory,
       base::colnames(table) <- table[2,]
       table <- table[-c(1:2),]
       table <- table[,c("Meter Timestamp","Historic Glucose(mg/dL)")]
+      base::colnames(table) <- c('timestamp','sensorglucose')
+    } else if (cgmtype == "libre pro") {
+      id <- table[1,1]
+      base::colnames(table) <- table[2,]
+      table <- table[-c(1:2),]
+      table <- table[,c("Time","Historic Glucose (mg/dL)")]
       base::colnames(table) <- c('timestamp','sensorglucose')
     } else if (cgmtype == "manual") {
       table$sensorglucose <- 
