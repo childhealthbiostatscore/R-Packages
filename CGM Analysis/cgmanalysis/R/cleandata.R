@@ -55,7 +55,8 @@ cleandata <- function(inputdirectory,
                                  header = TRUE,
                                  stringsAsFactors = FALSE,
                                  na.strings = "",
-                                 fileEncoding = enc)
+                                 fileEncoding = enc,
+                                 comment.char = "")
     } else if (ext == "csv") {
         table <- utils::read.csv(files[f],
                                  stringsAsFactors = FALSE,
