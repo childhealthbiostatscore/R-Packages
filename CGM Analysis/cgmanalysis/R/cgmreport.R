@@ -16,10 +16,9 @@
 #' @export
 
 cgmreport <- function(inputdirectory,
-                      outputdirectory = tempdir()){
-  
-# Set locale to read all characters.    
-  Sys.setlocale('LC_ALL','C')
+                      outputdirectory = tempdir(),
+                      tz = "UTC",
+                      yaxis = c(0,400)){
   
 # Get file list.  
   files <- base::list.files(path = inputdirectory,full.names = TRUE)
@@ -48,7 +47,7 @@ cgmreport <- function(inputdirectory,
                       "Ydm HM","Ydm HMS","ydm HM","ydm HMS")
   aggregateAGPdata$timestamp <- 
     as.POSIXct(lubridate::parse_date_time(aggregateAGPdata$timestamp,
-                               dateparseorder,tz = "UTC"))
+                               dateparseorder,tz = tz))
   aggregateAGPdata$hour <- lubridate::round_date(aggregateAGPdata$timestamp,"hour")
   aggregateAGPdata$time <- 
     as.POSIXct(strftime(aggregateAGPdata$timestamp,format = "%H:%M"),
@@ -105,7 +104,8 @@ cgmreport <- function(inputdirectory,
     ggplot2::scale_x_datetime(labels = function(x) format(x, format = "%H:%M"))+
     ggplot2::scale_fill_manual("",values = "blue")+
     ggplot2::scale_color_manual("",values = "red")+
-    ggplot2::scale_linetype_manual("",values = "dashed")
+    ggplot2::scale_linetype_manual("",values = "dashed")+
+    ggplot2::ylim(yaxis[1],yaxis[2])
   
   AGPloess <- 
     ggplot2::ggplot(aggregateAGPdata, ggplot2::aes(x = aggregateAGPdata$time, y = aggregateAGPdata$sensorglucose))+
@@ -116,7 +116,8 @@ cgmreport <- function(inputdirectory,
     ggplot2::xlab("Time (hour)")+
     ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))+
     ggplot2::labs(colour = "Subject ID")+
-    ggplot2::scale_x_datetime(labels = function(x) format(x, format = "%H:%M"))
+    ggplot2::scale_x_datetime(labels = function(x) format(x, format = "%H:%M"))+
+    ggplot2::ylim(yaxis[1],yaxis[2])
   
   aggAGPloess <- 
     ggplot2::ggplot(aggregateAGPdata, ggplot2::aes(x = aggregateAGPdata$time, y = aggregateAGPdata$sensorglucose))+
@@ -126,7 +127,8 @@ cgmreport <- function(inputdirectory,
     ggplot2::ylab("Sensor BG (mg/dL)")+
     ggplot2::xlab("Time (hour)")+
     ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))+
-    ggplot2::scale_x_datetime(labels = function(x) format(x, format = "%H:%M"))
+    ggplot2::scale_x_datetime(labels = function(x) format(x, format = "%H:%M"))+
+    ggplot2::ylim(yaxis[1],yaxis[2])
 
   grDevices::pdf(base::paste(outputdirectory,"/","AGP_Tukey.pdf",sep = ""),
       width = 11,height = 8.5)
