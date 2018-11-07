@@ -39,8 +39,8 @@
 cgmvariables <- function(inputdirectory,
                          outputdirectory = tempdir(),
                          outputname = "REDCap Upload",
-                         aboveexcursionlength = 35,
-                         belowexcursionlength = 10,
+                         aboveexcursionlength = 15,
+                         belowexcursionlength = 15,
                          magedef = "1sd",
                          daystart = 6,
                          dayend = 22) {
