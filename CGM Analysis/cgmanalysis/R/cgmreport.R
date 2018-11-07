@@ -9,6 +9,8 @@
 #' @param inputdirectory The directory containing all cleaned, formatted CGM 
 #' data to be analyzed.
 #' @param outputdirectory The directory where plot PDF files should be written.
+#' @param tz The time zone in which the data were recorded.
+#' @param yaxis The range of the yaxis in mg/dL.
 #' @usage cgmreport(inputdirectory, outputdirectory = tempdir())
 #' @examples cgmreport(system.file("extdata","Cleaned",package = "cgmanalysis"))
 #' @return Aggregate and per subject AGP reports based on all of the cleaned CGM 
