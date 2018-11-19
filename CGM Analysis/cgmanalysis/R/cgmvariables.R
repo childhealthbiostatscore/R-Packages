@@ -42,6 +42,7 @@ cgmvariables <- function(inputdirectory,
                          aboveexcursionlength = 15,
                          belowexcursionlength = 15,
                          magedef = "1sd",
+                         congan = 1,
                          daystart = 6,
                          dayend = 22) {
 
@@ -49,7 +50,7 @@ cgmvariables <- function(inputdirectory,
 # file in the input directory, and is desgined to be uploaded to REDCap. 
   files <- base::list.files(path = inputdirectory,full.names = TRUE)
   cgmupload <- 
-    base::data.frame(base::matrix(nrow = 0,ncol = base::length(files)))
+    base::as.data.frame(base::matrix(nrow = 0,ncol = base::length(files)))
   base::colnames(cgmupload) <- base::rep("Record",base::length(files))
 # Define the order in which lubridate parses dates.  
   dateparseorder <- c("mdy HM","mdy HMS","mdY HM","mdY HMS","dmy HM","dmy HMS",
@@ -71,16 +72,9 @@ cgmvariables <- function(inputdirectory,
                                                   dateparseorder,tz = "UTC"))
     table$sensorglucose <- base::as.numeric(table$sensorglucose)
     interval <- pracma::Mode(base::diff(base::as.numeric(table$timestamp)))
-    cgmupload["date_cgm_placement", f] <- 
-      as.character(as.Date(table$subjectid[2],format = "%m/%d/%Y %T"))
-    table$subjectid[2] <- 
-      base::as.POSIXct(lubridate::parse_date_time(table$subjectid[2],
-                                                  dateparseorder),tz = "UTC")
-    table$subjectid[3] <- 
-      base::as.POSIXct(lubridate::parse_date_time(table$subjectid[3],
-                                                  dateparseorder),tz = "UTC")
+    cgmupload["date_cgm_placement", f] <- as.character(min(table$timestamp))
     
-    totaltime <- as.numeric(table$subjectid[3])-as.numeric(table$subjectid[2])
+    totaltime <- as.numeric(max(table$timestamp))-as.numeric(min(table$timestamp))
     cgmupload["percent_cgm_wear",f] <- 
       round(((length(table$sensorglucose)/(totaltime/interval))*100),2)
     
@@ -96,6 +90,8 @@ cgmvariables <- function(inputdirectory,
     cgmupload["estimated_a1c",f] <- 
       base::round((46.7 + (base::mean(table$sensorglucose[
         base::which(!is.na(table$sensorglucose))]))) / 28.7,digits = 1)
+    cgmupload["gmi"] <- base::round(3.31 + (0.02392 * base::mean(table$sensorglucose[
+      base::which(!is.na(table$sensorglucose))])), digits = 1)
     cgmupload["q1_sensor",f] <- 
       base::as.numeric(base::summary(table$sensorglucose[
         base::which(!is.na(table$sensorglucose))])[2])
@@ -266,6 +262,16 @@ cgmvariables <- function(inputdirectory,
       ((base::sum(BGunder70) * (interval/60))/
          (base::length(table$sensorglucose) * (interval/60))) * 100
     
+# Time in range.
+    BGinrange <- 
+      base::as.numeric(table$sensorglucose[base::which(!is.na(table$sensorglucose))],
+                       length = 1)
+    BGinrange <- ifelse(BGinrange %in% 70:180, 1,0)
+    cgmupload["min_spent_70_180",f] <- base::sum(BGinrange) * (interval/60)
+    cgmupload["percent_time_70_180",f] <- 
+      ((base::sum(BGinrange) * (interval/60))/
+         (base::length(table$sensorglucose) * (interval/60))) * 100
+    
 # Find daytime AUC.
     daytime_indexes <- 
       base::which(base::as.numeric(base::format(table$timestamp,"%H")) %in% 
@@ -404,6 +410,14 @@ cgmvariables <- function(inputdirectory,
                                                             magedef)]))
     }
     
+#J-index
+    cgmupload["j_index",f] <- 
+      0.324 * (mean(table$sensorglucose, na.rm = T) + sd(table$sensorglucose, na.rm = T))^2
+# CONGA    
+    n <- (congan * 3600)/interval
+    congas <- table$sensorglucose[seq(1,length(table$sensorglucose),n)]
+    congas <- diff(congas)
+    cgmupload[paste0("conga_",congan),f] <- sd(congas)
 # MODD.
     table$time <- lubridate::round_date(table$timestamp,"5 minutes")
     table$time <- base::strftime(table$time, format = "%H:%M",tz = "UTC")
