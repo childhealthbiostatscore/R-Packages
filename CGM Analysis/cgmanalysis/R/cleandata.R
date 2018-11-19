@@ -70,7 +70,7 @@ cleandata <- function(inputdirectory,
                                    na.strings = "")
         }
     
-    if (base::ncol(table) == 3 && base::colnames(table)[3] == "X") {
+    if (base::ncol(table) == 3 && base::colnames(table)[3] == "X" | base::ncol(table) == 2) {
       cgmtype <- "diasend"
     } else if (base::ncol(table) == 18) {
       cgmtype <- "libre"
@@ -92,11 +92,9 @@ cleandata <- function(inputdirectory,
       
 # Format columns.
     if (cgmtype == "diasend") {
-      id <- base::colnames(table)[1]
-      table <- table[-c(base::which(!is.na(table[,3]))),]
-      table <- table[,-c(3)]
+      id <- base::colnames(table)[2]
+      table <- table[-c(1:base::which(table[,1] == "Time")),]
       base::colnames(table) <- c("timestamp","sensorglucose")
-      table <- table[-c(1),]
     } else if (cgmtype == "carelink") {
       id <- table$Patient.ID[1]
       table <- table[-c(1:6),]
