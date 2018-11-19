@@ -90,7 +90,7 @@ cgmvariables <- function(inputdirectory,
     cgmupload["estimated_a1c",f] <- 
       base::round((46.7 + (base::mean(table$sensorglucose[
         base::which(!is.na(table$sensorglucose))]))) / 28.7,digits = 1)
-    cgmupload["gmi"] <- base::round(3.31 + (0.02392 * base::mean(table$sensorglucose[
+    cgmupload["gmi",f] <- base::round(3.31 + (0.02392 * base::mean(table$sensorglucose[
       base::which(!is.na(table$sensorglucose))])), digits = 1)
     cgmupload["q1_sensor",f] <- 
       base::as.numeric(base::summary(table$sensorglucose[
