@@ -415,9 +415,8 @@ cgmvariables <- function(inputdirectory,
       0.324 * (mean(table$sensorglucose, na.rm = T) + sd(table$sensorglucose, na.rm = T))^2
 # CONGA    
     n <- (congan * 3600)/interval
-    congas <- table$sensorglucose[seq(1,length(table$sensorglucose),n)]
-    congas <- diff(congas)
-    cgmupload[paste0("conga_",congan),f] <- sd(congas)
+    congas <- table$sensorglucose - dplyr::lag(table$sensorglucose,n)
+    cgmupload[paste0("conga_",congan),f] <- sd(congas,na.rm = T)
 # MODD.
     table$time <- lubridate::round_date(table$timestamp,"5 minutes")
     table$time <- base::strftime(table$time, format = "%H:%M",tz = "UTC")
