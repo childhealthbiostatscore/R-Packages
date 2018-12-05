@@ -414,8 +414,14 @@ cgmvariables <- function(inputdirectory,
     cgmupload["j_index",f] <- 
       0.324 * (mean(table$sensorglucose, na.rm = T) + sd(table$sensorglucose, na.rm = T))^2
 # CONGA    
-    n <- (congan * 3600)/interval
-    congas <- table$sensorglucose - dplyr::lag(table$sensorglucose,n)
+    n <- (congan * 3600)
+    conga.times <- table$timestamp + n
+    conga.times <- conga.times[!is.na(conga.times)]
+    conga.times <- conga.times[order(conga.times)]
+    conga.times <- conga.times[which(conga.times %in% table$timestamp)]
+    begin.times <- conga.times - n
+    congas <- table$sensorglucose[which(table$timestamp %in% conga.times)] - 
+      table$sensorglucose[which(table$timestamp %in% begin.times)]
     cgmupload[paste0("conga_",congan),f] <- sd(congas,na.rm = T)
 # MODD.
     table$time <- lubridate::round_date(table$timestamp,"5 minutes")
