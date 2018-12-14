@@ -25,12 +25,14 @@
 #' counting day time at 6:00am, set daystart = 6).
 #' @param dayend The numeric hour at which daytime should end (this parameter 
 #' uses military time, so to stop counting day time at 10:00pm, set dayend = 22).
+#' @format Whether observations are in rows or columns.
 #' @usage cgmvariables(inputdirectory,
 #' outputdirectory = tempdir(),
 #' outputname = "REDCap Upload",
 #' aboveexcursionlength = 35,
 #' belowexcursionlength = 10,
-#' magedef = "1sd")
+#' magedef = "1sd",
+#' format = "columns")
 #' @examples cgmvariables(system.file("extdata","Cleaned",package = "cgmanalysis"))
 #' @return A data frame containing calculated CGM variables, with each column
 #' representing one CGM file.
@@ -39,12 +41,13 @@
 cgmvariables <- function(inputdirectory,
                          outputdirectory = tempdir(),
                          outputname = "REDCap Upload",
-                         aboveexcursionlength = 15,
-                         belowexcursionlength = 15,
+                         aboveexcursionlength = 35,
+                         belowexcursionlength = 10,
                          magedef = "1sd",
                          congan = 1,
                          daystart = 6,
-                         dayend = 22) {
+                         dayend = 22,
+                         format = "rows") {
 
 # Read in data, create results dataframe. The dataframe has one column for each 
 # file in the input directory, and is desgined to be uploaded to REDCap. 
@@ -63,7 +66,7 @@ cgmvariables <- function(inputdirectory,
 # cleandata() output. 
   for (f in 1:base::length(files)) {    
 # Basic variables
-    table <- utils::read.csv(files[f],stringsAsFactors = FALSE)
+    table <- utils::read.csv(files[f],stringsAsFactors = FALSE,na.strings = "")
     
     cgmupload["subject_id",f] <- table$subjectid[1]
 # Format columns.    
@@ -72,9 +75,12 @@ cgmvariables <- function(inputdirectory,
                                                   dateparseorder,tz = "UTC"))
     table$sensorglucose <- base::as.numeric(table$sensorglucose)
     interval <- pracma::Mode(base::diff(base::as.numeric(table$timestamp)))
-    cgmupload["date_cgm_placement", f] <- as.character(min(table$timestamp))
+    interval <- base::abs(interval)
+    cgmupload["date_cgm_placement", f] <- as.character(min(table$timestamp,na.rm = T))
     
-    totaltime <- as.numeric(max(table$timestamp))-as.numeric(min(table$timestamp))
+    totaltime <- as.numeric(difftime(max(table$timestamp, na.rm = T),
+                                     min(table$timestamp,na.rm = T),
+                                     units = "secs"))
     cgmupload["percent_cgm_wear",f] <- 
       round(((length(table$sensorglucose)/(totaltime/interval))*100),2)
     
@@ -86,7 +92,7 @@ cgmvariables <- function(inputdirectory,
     cgmupload["total_sensor_readings",f] <- 
       base::as.numeric(base::length(base::which(!is.na(table$sensorglucose))))
     cgmupload["average_sensor",f] <- 
-      base::mean(table$sensorglucose[base::which(!is.na(table$sensorglucose))])
+      base::mean(table$sensorglucose[base::which(!is.na(table$sensorglucose))],na.rm = T)
     cgmupload["estimated_a1c",f] <- 
       base::round((46.7 + (base::mean(table$sensorglucose[
         base::which(!is.na(table$sensorglucose))]))) / 28.7,digits = 1)
@@ -456,6 +462,10 @@ cgmvariables <- function(inputdirectory,
 # Write file.
   cgmupload <- 
     base::cbind("Variable / Field Name" = rownames(cgmupload),cgmupload)
+  if (format == "rows") {
+    cgmupload <- as.data.frame(t(cgmupload))
+    cgmupload <- cgmupload[-1,]
+  }
   filename <- base::paste(outputdirectory,"/",outputname,".csv",sep = "")
   utils::write.csv(cgmupload, file = filename,row.names = FALSE)
 }
