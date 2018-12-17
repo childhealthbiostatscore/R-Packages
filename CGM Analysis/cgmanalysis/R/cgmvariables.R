@@ -21,18 +21,22 @@
 #' threshold to count an excursion.
 #' @param magedef How large an excursion needs to be in order to count in the 
 #' MAGE calculation (e.g. greater than 1 standard deviation).
+#' @param congan CONGA interval in hours.
 #' @param daystart The numeric hour at which daytime should start (e.g. to start 
 #' counting day time at 6:00am, set daystart = 6).
 #' @param dayend The numeric hour at which daytime should end (this parameter 
 #' uses military time, so to stop counting day time at 10:00pm, set dayend = 22).
-#' @format Whether observations are in rows or columns.
+#' @param format Whether observations are in rows or columns.
 #' @usage cgmvariables(inputdirectory,
 #' outputdirectory = tempdir(),
 #' outputname = "REDCap Upload",
 #' aboveexcursionlength = 35,
 #' belowexcursionlength = 10,
 #' magedef = "1sd",
-#' format = "columns")
+#' congan = 1,
+#' daystart = 6,
+#' dayend = 22,
+#' format = "rows")
 #' @examples cgmvariables(system.file("extdata","Cleaned",package = "cgmanalysis"))
 #' @return A data frame containing calculated CGM variables, with each column
 #' representing one CGM file.

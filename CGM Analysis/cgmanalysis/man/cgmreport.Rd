@@ -4,13 +4,18 @@
 \alias{cgmreport}
 \title{Generate AGP}
 \usage{
-cgmreport(inputdirectory, outputdirectory = tempdir())
+cgmreport(inputdirectory, outputdirectory = tempdir(), tz = "UTC", 
+yaxis = c(0,400))
 }
 \arguments{
 \item{inputdirectory}{The directory containing all cleaned, formatted CGM 
 data to be analyzed.}
 
 \item{outputdirectory}{The directory where plot PDF files should be written.}
+
+\item{tz}{The time zone in which the data were recorded.}
+
+\item{yaxis}{The range of the yaxis in mg/dL.}
 }
 \value{
 Aggregate and per subject AGP reports based on all of the cleaned CGM 

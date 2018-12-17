@@ -39,7 +39,7 @@ cleandata <- function(inputdirectory,
 # Set system locale to read all characters. Read in file list. Creat output 
 # directory.
   files <- base::list.files(path = inputdirectory,full.names = TRUE)
-  dir.create(outputdirectory,showWarnings = FALSE)
+  base::dir.create(outputdirectory,showWarnings = FALSE)
   dateparseorder <- c("mdy HM","mdy HMS","mdY HM","mdY HMS","dmy HM","dmy HMS",
                       "dmY HM","dmY HMS","Ymd HM","Ymd HMS","ymd HM","ymd HMS",
                       "Ydm HM","Ydm HMS","ydm HM","ydm HMS")
