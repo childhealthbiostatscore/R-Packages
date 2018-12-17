@@ -80,13 +80,15 @@ cgmvariables <- function(inputdirectory,
     table$sensorglucose <- base::as.numeric(table$sensorglucose)
     interval <- pracma::Mode(base::diff(base::as.numeric(table$timestamp)))
     interval <- base::abs(interval)
-    cgmupload["date_cgm_placement", f] <- as.character(min(table$timestamp,na.rm = T))
+    cgmupload["date_cgm_placement", f] <- 
+      base::as.character(min(table$timestamp,na.rm = T))
     
-    totaltime <- as.numeric(difftime(max(table$timestamp, na.rm = T),
-                                     min(table$timestamp,na.rm = T),
-                                     units = "secs"))
+    totaltime <- 
+      base::as.numeric(base::difftime(base::max(table$timestamp, na.rm = T),
+                                      base::min(table$timestamp,na.rm = T),
+                                      units = "secs"))
     cgmupload["percent_cgm_wear",f] <- 
-      round(((length(table$sensorglucose)/(totaltime/interval))*100),2)
+      base::round(((base::length(table$sensorglucose)/(totaltime/interval))*100),2)
     
     table <- table[,-c(1)]
     table <- table[stats::complete.cases(table),]
@@ -301,14 +303,14 @@ cgmvariables <- function(inputdirectory,
 # Other daytime sensor glucose variables.
     cgmupload["daytime_avg_sensor_glucose",f] <- 
       base::mean(stats::na.omit(daytime_sensor))
-    cgmupload["daytime_min_sensor_glucose",f] <- min(daytime_sensor)
-    cgmupload["daytime_max_sensor_glucose",f] <- max(daytime_sensor)
+    cgmupload["daytime_min_sensor_glucose",f] <- base::min(daytime_sensor)
+    cgmupload["daytime_max_sensor_glucose",f] <- base::max(daytime_sensor)
     cgmupload["daytime_sd",f] <- stats::sd(daytime_sensor)
     
 # Nighttime AUC.
     nighttime_indexes <- 
       base::which(base::as.numeric(base::format(table$timestamp,"%H")) %in% 
-                    allhours[which(!(0:23 %in% daystart:dayend))])
+                    allhours[base::which(!(0:23 %in% daystart:dayend))])
     nighttime_sensor <- table$sensorglucose[nighttime_indexes]
     xaxis <- 
       base::seq(from = 0, length.out = base::length(nighttime_indexes),by = 
@@ -316,7 +318,7 @@ cgmvariables <- function(inputdirectory,
     
 # Day/night ratio.
     cgmupload["day_night_sensor_ratio",f] <- 
-      round(length(daytime_sensor)/length(nighttime_sensor),1)
+      base::round(base::length(daytime_sensor)/base::length(nighttime_sensor),1)
     
 # Remove NAs if they are present.
     xaxis[base::which(is.na(nighttime_sensor))] <- NA
@@ -328,8 +330,8 @@ cgmvariables <- function(inputdirectory,
 # Other nighttime sensor glucose variables.
     cgmupload["nighttime_avg_sens_glucose",f] <- 
       base::mean(stats::na.omit(nighttime_sensor))
-    cgmupload["nighttime_min_sens_glucose",f] <- min(nighttime_sensor)
-    cgmupload["nighttime_max_sens_glucose",f] <- max(nighttime_sensor)
+    cgmupload["nighttime_min_sens_glucose",f] <- base::min(nighttime_sensor)
+    cgmupload["nighttime_max_sens_glucose",f] <- base::max(nighttime_sensor)
     cgmupload["nighttime_sd",f] <- stats::sd(nighttime_sensor)
     
 # Total AUC.
@@ -422,17 +424,18 @@ cgmvariables <- function(inputdirectory,
     
 #J-index
     cgmupload["j_index",f] <- 
-      0.324 * (mean(table$sensorglucose, na.rm = T) + sd(table$sensorglucose, na.rm = T))^2
+      0.324 * (base::mean(table$sensorglucose, na.rm = T) + 
+                 stats::sd(table$sensorglucose, na.rm = T))^2
 # CONGA    
     n <- (congan * 3600)
     conga.times <- table$timestamp + n
     conga.times <- conga.times[!is.na(conga.times)]
-    conga.times <- conga.times[order(conga.times)]
-    conga.times <- conga.times[which(conga.times %in% table$timestamp)]
+    conga.times <- conga.times[base::order(conga.times)]
+    conga.times <- conga.times[base::which(conga.times %in% table$timestamp)]
     begin.times <- conga.times - n
-    congas <- table$sensorglucose[which(table$timestamp %in% conga.times)] - 
-      table$sensorglucose[which(table$timestamp %in% begin.times)]
-    cgmupload[paste0("conga_",congan),f] <- sd(congas,na.rm = T)
+    congas <- table$sensorglucose[base::which(table$timestamp %in% conga.times)] - 
+      table$sensorglucose[base::which(table$timestamp %in% begin.times)]
+    cgmupload[base::paste0("conga_",congan),f] <- stats::sd(congas,na.rm = T)
 # MODD.
     table$time <- lubridate::round_date(table$timestamp,"5 minutes")
     table$time <- base::strftime(table$time, format = "%H:%M",tz = "UTC")
@@ -467,7 +470,7 @@ cgmvariables <- function(inputdirectory,
   cgmupload <- 
     base::cbind("Variable / Field Name" = rownames(cgmupload),cgmupload)
   if (format == "rows") {
-    cgmupload <- as.data.frame(t(cgmupload))
+    cgmupload <- base::as.data.frame(base::t(cgmupload))
     cgmupload <- cgmupload[-1,]
   }
   filename <- base::paste(outputdirectory,"/",outputname,".csv",sep = "")
