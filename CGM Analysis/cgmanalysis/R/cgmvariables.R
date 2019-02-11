@@ -300,12 +300,50 @@ cgmvariables <- function(inputdirectory,
     aucs <- pracma::cumtrapz(xaxis,daytime_sensor)
     cgmupload["daytime_auc",f] <- aucs[base::length(daytime_sensor)]
     
+# TIR variables for daytime
+    BGinrange <- ifelse(daytime_sensor %in% 70:180, 1,0)
+    cgmupload["min_spent_70_180_day",f] <- base::sum(BGinrange,na.rm = T) * (interval/60)
+    cgmupload["percent_time_70_180_day",f] <- 
+      (base::sum(BGinrange,na.rm = T) * (interval/60))/(base::length(daytime_sensor) * (interval/60)) * 100
+    
+    BGinrange <- ifelse(daytime_sensor < 54, 1,0)
+    cgmupload["min_spent_under_54_day",f] <- base::sum(BGinrange,na.rm = T) * (interval/60)
+    cgmupload["percent_time_under_54_day",f] <- 
+      (base::sum(BGinrange,na.rm = T) * (interval/60))/(base::length(daytime_sensor) * (interval/60)) * 100
+    
+    BGinrange <- ifelse(daytime_sensor < 60, 1,0)
+    cgmupload["min_spent_under_60_day",f] <- base::sum(BGinrange,na.rm = T) * (interval/60)
+    cgmupload["percent_time_under_60_day",f] <- 
+      (base::sum(BGinrange,na.rm = T) * (interval/60))/(base::length(daytime_sensor) * (interval/60)) * 100
+    
+    BGinrange <- ifelse(daytime_sensor < 70, 1,0)
+    cgmupload["min_spent_under_70_day",f] <- base::sum(BGinrange,na.rm = T) * (interval/60)
+    cgmupload["percent_time_under_70_day",f] <- 
+      (base::sum(BGinrange,na.rm = T) * (interval/60))/(base::length(daytime_sensor) * (interval/60)) * 100
+    
+    BGinrange <- ifelse(daytime_sensor > 180, 1,0)
+    cgmupload["min_spent_over_180_day",f] <- base::sum(BGinrange,na.rm = T) * (interval/60)
+    cgmupload["percent_time_over_180_day",f] <- 
+      (base::sum(BGinrange,na.rm = T) * (interval/60))/(base::length(daytime_sensor) * (interval/60)) * 100
+    
+    BGinrange <- ifelse(daytime_sensor > 200, 1,0)
+    cgmupload["min_spent_over_200_day",f] <- base::sum(BGinrange,na.rm = T) * (interval/60)
+    cgmupload["percent_time_over_200_day",f] <- 
+      (base::sum(BGinrange,na.rm = T) * (interval/60))/(base::length(daytime_sensor) * (interval/60)) * 100
+    
+    BGinrange <- ifelse(daytime_sensor > 250, 1,0)
+    cgmupload["min_spent_over_250_day",f] <- base::sum(BGinrange,na.rm = T) * (interval/60)
+    cgmupload["percent_time_over_250_day",f] <- 
+      (base::sum(BGinrange,na.rm = T) * (interval/60))/(base::length(daytime_sensor) * (interval/60)) * 100
+    
 # Other daytime sensor glucose variables.
     cgmupload["daytime_avg_sensor_glucose",f] <- 
       base::mean(stats::na.omit(daytime_sensor))
     cgmupload["daytime_min_sensor_glucose",f] <- base::min(daytime_sensor)
     cgmupload["daytime_max_sensor_glucose",f] <- base::max(daytime_sensor)
     cgmupload["daytime_sd",f] <- stats::sd(daytime_sensor)
+
+    
     
 # Nighttime AUC.
     nighttime_indexes <- 
@@ -326,6 +364,42 @@ cgmvariables <- function(inputdirectory,
     nighttime_sensor <- nighttime_sensor[!is.na(nighttime_sensor)]
     aucs <- pracma::cumtrapz(xaxis,nighttime_sensor)
     cgmupload["nighttime_auc",f] <- aucs[base::length(nighttime_sensor)]
+    
+# TIR variables for nighttime
+    BGinrange <- ifelse(nighttime_sensor %in% 70:180, 1,0)
+    cgmupload["min_spent_70_180_night",f] <- base::sum(BGinrange,na.rm = T) * (interval/60)
+    cgmupload["percent_time_70_180_night",f] <- 
+      (base::sum(BGinrange,na.rm = T) * (interval/60))/(base::length(nighttime_sensor) * (interval/60)) * 100
+    
+    BGinrange <- ifelse(nighttime_sensor < 54, 1,0)
+    cgmupload["min_spent_under_54_night",f] <- base::sum(BGinrange,na.rm = T) * (interval/60)
+    cgmupload["percent_time_under_54_night",f] <- 
+      (base::sum(BGinrange,na.rm = T) * (interval/60))/(base::length(nighttime_sensor) * (interval/60)) * 100
+    
+    BGinrange <- ifelse(nighttime_sensor < 60, 1,0)
+    cgmupload["min_spent_under_60_night",f] <- base::sum(BGinrange,na.rm = T) * (interval/60)
+    cgmupload["percent_time_under_60_night",f] <- 
+      (base::sum(BGinrange,na.rm = T) * (interval/60))/(base::length(nighttime_sensor) * (interval/60)) * 100
+    
+    BGinrange <- ifelse(nighttime_sensor < 70, 1,0)
+    cgmupload["min_spent_under_70_night",f] <- base::sum(BGinrange,na.rm = T) * (interval/60)
+    cgmupload["percent_time_under_70_night",f] <- 
+      (base::sum(BGinrange,na.rm = T) * (interval/60))/(base::length(nighttime_sensor) * (interval/60)) * 100
+    
+    BGinrange <- ifelse(nighttime_sensor > 180, 1,0)
+    cgmupload["min_spent_over_180_night",f] <- base::sum(BGinrange,na.rm = T) * (interval/60)
+    cgmupload["percent_time_over_180_night",f] <- 
+      (base::sum(BGinrange,na.rm = T) * (interval/60))/(base::length(nighttime_sensor) * (interval/60)) * 100
+    
+    BGinrange <- ifelse(nighttime_sensor > 200, 1,0)
+    cgmupload["min_spent_over_200_night",f] <- base::sum(BGinrange,na.rm = T) * (interval/60)
+    cgmupload["percent_time_over_200_night",f] <- 
+      (base::sum(BGinrange,na.rm = T) * (interval/60))/(base::length(nighttime_sensor) * (interval/60)) * 100
+    
+    BGinrange <- ifelse(nighttime_sensor > 250, 1,0)
+    cgmupload["min_spent_over_250_night",f] <- base::sum(BGinrange,na.rm = T) * (interval/60)
+    cgmupload["percent_time_over_250_night",f] <- 
+      (base::sum(BGinrange,na.rm = T) * (interval/60))/(base::length(nighttime_sensor) * (interval/60)) * 100    
     
 # Other nighttime sensor glucose variables.
     cgmupload["nighttime_avg_sens_glucose",f] <- 
