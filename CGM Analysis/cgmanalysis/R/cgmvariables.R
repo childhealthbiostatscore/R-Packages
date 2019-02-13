@@ -27,6 +27,7 @@
 #' @param dayend The numeric hour at which daytime should end (this parameter 
 #' uses military time, so to stop counting day time at 10:00pm, set dayend = 22).
 #' @param format Whether observations are in rows or columns.
+#' @param printname Whether or not to print each file name (for troubleshooting).
 #' @usage cgmvariables(inputdirectory,
 #' outputdirectory = tempdir(),
 #' outputname = "REDCap Upload",
@@ -51,7 +52,8 @@ cgmvariables <- function(inputdirectory,
                          congan = 1,
                          daystart = 6,
                          dayend = 22,
-                         format = "rows") {
+                         format = "rows",
+                         printname = T) {
 
 # Read in data, create results dataframe. The dataframe has one column for each 
 # file in the input directory, and is desgined to be uploaded to REDCap. 
@@ -70,7 +72,12 @@ cgmvariables <- function(inputdirectory,
 # cleandata() output. 
   for (f in 1:base::length(files)) {    
 # Basic variables
-    table <- utils::read.csv(files[f],stringsAsFactors = FALSE,na.strings = "")
+    table <- utils::read.csv(files[f],stringsAsFactors = FALSE,na.strings = c("NA",""))
+    
+# Print name
+    if(printname == T) {
+      print(basename(files[f]))
+    }
     
     cgmupload["subject_id",f] <- table$subjectid[1]
 # Format columns.    
