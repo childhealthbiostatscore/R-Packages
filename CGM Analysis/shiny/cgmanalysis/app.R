@@ -32,12 +32,12 @@ ui <-
       )
     )
 server <- function(input, output) {
+  inFile <- eventReactive({input$file1})
+  cgmtable <- reactive({read.csv(inFile$datapath, header = T,sep = ",")})
   output$contents <- renderTable({
-    inFile <- input$file1
     if (is.null(inFile))
       return(NULL)
-    read.csv(inFile$datapath, header = T,
-             sep = ",")
+    cgmtable()
   })
 }
 # Run the application 
