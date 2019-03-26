@@ -37,7 +37,8 @@
 #' congan = 1,
 #' daystart = 6,
 #' dayend = 22,
-#' format = "rows")
+#' format = "rows",
+#' printname = T)
 #' @examples cgmvariables(system.file("extdata","Cleaned",package = "cgmanalysis"))
 #' @return A data frame containing calculated CGM variables, with each column
 #' representing one CGM file.

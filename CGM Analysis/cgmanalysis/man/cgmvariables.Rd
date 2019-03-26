@@ -13,7 +13,8 @@ magedef = "1sd",
 congan = 1,
 daystart = 6,
 dayend = 22,
-format = "rows")
+format = "rows",
+printname = T)
 }
 \arguments{
 \item{inputdirectory}{The directory containing cleaned CSV files for
@@ -43,6 +44,8 @@ counting day time at 6:00am, set daystart = 6).}
 uses military time, so to stop counting day time at 10:00pm, set dayend = 22).}
 
 \item{format}{Whether observations are in rows or columns.}
+
+\item{printname}{Whether or not to print each file name (for troubleshooting).}
 }
 \value{
 A data frame containing calculated CGM variables, with each column
