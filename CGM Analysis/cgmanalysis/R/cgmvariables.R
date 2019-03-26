@@ -505,7 +505,7 @@ cgmvariables <- function(inputdirectory,
     
 #J-index
     cgmupload["j_index",f] <- 
-      0.324 * (base::mean(table$sensorglucose, na.rm = T) + 
+      0.001 * (base::mean(table$sensorglucose, na.rm = T) + 
                  stats::sd(table$sensorglucose, na.rm = T))^2
 # CONGA    
     n <- (congan * 3600)
