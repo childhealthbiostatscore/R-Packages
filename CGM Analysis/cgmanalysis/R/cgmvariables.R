@@ -74,7 +74,9 @@ cgmvariables <- function(inputdirectory,
   for (f in 1:base::length(files)) {    
 # Basic variables
     table <- utils::read.csv(files[f],stringsAsFactors = FALSE,na.strings = c("NA",""))
-    
+# Remove duplicates
+    table$subjectid <- table$subjectid[1]
+    table <- unique(table)
 # Print name
     if(printname == T) {
       print(basename(files[f]))
@@ -96,7 +98,7 @@ cgmvariables <- function(inputdirectory,
                                       base::min(table$timestamp,na.rm = T),
                                       units = "secs"))
     cgmupload["percent_cgm_wear",f] <- 
-      base::round(((base::length(table$sensorglucose)/(totaltime/interval))*100),2)
+      base::round(((base::length(which(!is.na(table$sensorglucose)))/(totaltime/interval))*100),2)
     
     table <- table[,-c(1)]
     table <- table[stats::complete.cases(table),]
