@@ -108,7 +108,11 @@ cleandata <- function(inputdirectory,
     } else if (cgmtype == "dexcom") {
       if ('Glucose.Value..mg.dL.' %in% colnames(table)) {
         id <- table$Patient.Info[3]
-        table <- table[,c('Timestamp..YYYY.MM.DDThh.mm.ss.','Glucose.Value..mg.dL.')]
+        if ('Timestamp..YYYY.MM.DDThh.mm.ss.' %in% colnames(table)) {
+          table <- table[,c('Timestamp..YYYY.MM.DDThh.mm.ss.','Glucose.Value..mg.dL.')]
+        } else {
+          table <- table[,c('Timestamp..YYYY.MM.DD.hh.mm.ss.','Glucose.Value..mg.dL.')]
+        }
         base::colnames(table) <- c('timestamp','sensorglucose')
         table$timestamp <- base::sub("T"," ",table$timestamp)
       } else {
