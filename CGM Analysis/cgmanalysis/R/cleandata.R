@@ -65,7 +65,7 @@ cleandata <- function(inputdirectory,
                                  skipNul = TRUE,
                                  fileEncoding = enc)
     } else if (ext == "xls" | ext == "xlsx" | ext == "xlsm") {
-          table <- gdata::read.xls(files[f],
+          temp <- readxl::read_excel(files[f],
                                    stringsAsFactors = FALSE,
                                    na.strings = "")
         }
@@ -161,7 +161,6 @@ cleandata <- function(inputdirectory,
       base::suppressWarnings(base::as.numeric(table$sensorglucose))
     table <- table[base::order(table$timestamp),]
 
-# ***Make record start time ignore "PULSE INIT" etc. for iPro***
     recordstart <- 
       base::strftime(table$timestamp[min(which(!is.na(table$sensorglucose)))],
                      format = "%m/%d/%Y %T")
