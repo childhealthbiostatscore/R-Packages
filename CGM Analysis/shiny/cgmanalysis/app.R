@@ -10,6 +10,7 @@
 #-------------------------------------------------------------------------------
 
 library(shiny)
+library(ggplot2)
 
 # Define UI for data upload app ----
 ui <- fluidPage(
@@ -59,7 +60,12 @@ ui <- fluidPage(
     
     # Main panel for displaying outputs
     mainPanel(
-      # AGP here
+      # Output: Tabset w/ plots and summary
+      tabsetPanel(type = "tabs",
+                  tabPanel("Summary Measures", tableOutput("summary")),
+                  tabPanel("AGP Tukey", plotOutput("tukey")),
+                  tabPanel("AGP Loess",  plotOutput("loess"))
+      )
     )
     
   )
@@ -94,7 +100,7 @@ server <- function(input, output) {
     return(df)
     
   })
-  
+  # Summary measures
   summ <- reactive({
     f <- 1
     aboveexcursionlength = 35
@@ -583,10 +589,86 @@ server <- function(input, output) {
     rh <- table$rBG[base::which(table$gluctransform > 0)]
     cgmupload["lbgi",f] <- base::mean(stats::na.omit(rl))
     cgmupload["hbgi",f] <- base::mean(stats::na.omit(rh))
-    return(cgmupload)
+    return(as.data.frame(cgmupload))
   })
   
+  output$summary <- renderTable({summ()},striped = T,rownames = T)
   
+  # Plots 
+  output$tukey <- renderPlot({
+    table$hour <- lubridate::round_date(table$timestamp,"hour")
+    table$time <- 
+      as.POSIXct(strftime(table$timestamp,format = "%H:%M"),
+                 format = "%H:%M")
+    table$hourmin <- 
+      lubridate::round_date(table$timestamp,"10 minutes")
+    table$hourmin <- 
+      as.POSIXct(strftime(table$hourmin,format = "%H:%M"),
+                 format = "%H:%M")
+    # Quartiles
+    quartiles <- 
+      data.frame(matrix(nrow = length(unique(table$hourmin)),ncol = 6))
+    colnames(quartiles) <- 
+      c("hourmin","sensorglucose5perc","sensorglucoseqone","sensorglucosemedian",
+        "sensorglucoseqthree","sensorglucose95perc")
+    quartiles$hourmin <- unique(table$hourmin)
+    quartiles <- quartiles[order(quartiles$hourmin),]
+    
+    for (i in 1:nrow(quartiles)) {
+      quartiles$sensorglucose5perc[i] <- 
+        stats::quantile(as.numeric(table$sensorglucose[which(table$hourmin == quartiles$hourmin[i])]),0.05)
+      quartiles$sensorglucoseqone[i] <- 
+        as.numeric(summary(table$sensorglucose[which(table$hourmin == quartiles$hourmin[i])])[2])
+      quartiles$sensorglucosemedian[i] <- 
+        as.numeric(summary(table$sensorglucose[which(table$hourmin == quartiles$hourmin[i])])[3])
+      quartiles$sensorglucoseqthree[i] <- 
+        as.numeric(summary(table$sensorglucose[which(table$hourmin == quartiles$hourmin[i])])[5])
+      quartiles$sensorglucose95perc[i] <- 
+        stats::quantile(as.numeric(table$sensorglucose[which(table$hourmin == quartiles$hourmin[i])]),0.95)
+    }
+    
+    quartiles$smooth5perc <- 
+      as.numeric(stats::smooth(quartiles$sensorglucose5perc,kind = "3R",twiceit = TRUE))
+    quartiles$smoothqone <- 
+      as.numeric(stats::smooth(quartiles$sensorglucoseqone,kind = "3R",twiceit = TRUE))
+    quartiles$smoothmed <- 
+      as.numeric(stats::smooth(quartiles$sensorglucosemedian,kind = "3R",twiceit = TRUE))
+    quartiles$smoothqthree <- 
+      as.numeric(stats::smooth(quartiles$sensorglucoseqthree,kind = "3R",twiceit = TRUE))
+    quartiles$smooth95perc <- 
+      as.numeric(stats::smooth(quartiles$sensorglucose95perc,kind = "3R",twiceit = TRUE))
+    # Plot
+    AGPtukey <- ggplot2::ggplot(quartiles, ggplot2::aes(x = quartiles$hourmin))+ 
+      ggplot2::geom_ribbon(ggplot2::aes(ymin = quartiles$smoothqone,ymax = quartiles$smoothqthree,fill = "Interquartile Range"),alpha = 0.5)+
+      ggplot2::geom_line(ggplot2::aes(y = quartiles$smoothmed, color = "Median"))+
+      ggplot2::geom_line(ggplot2::aes(y = quartiles$smooth95perc,linetype="5th & 95th Percentile"))+
+      ggplot2::geom_line(ggplot2::aes(y = quartiles$smooth5perc),linetype="dashed")+
+      ggplot2::ggtitle("Aggregate Daily Overlay (Tukey Smoothing)")+
+      ggplot2::ylab("Sensor BG (mg/dL)")+
+      ggplot2::xlab("Time (hour)")+
+      ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))+
+      ggplot2::scale_x_datetime(labels = function(x) format(x, format = "%H:%M"))+
+      ggplot2::scale_fill_manual("",values = "blue")+
+      ggplot2::scale_color_manual("",values = "red")+
+      ggplot2::scale_linetype_manual("",values = "dashed")+
+      ggplot2::ylim(0,400)
+    return(AGPtukey)
+  })
+  # Render Loess plot
+  output$loess <- renderPlot({
+    AGPloess <- 
+      ggplot2::ggplot(table, ggplot2::aes(x = table$time, y = table$sensorglucose))+
+      ggplot2::geom_smooth(ggplot2::aes(y = table$sensorglucose,color = table$subjectid),se = FALSE)+
+      ggplot2::geom_point(ggplot2::aes(y = table$sensorglucose, color = table$subjectid),shape = ".")+
+      ggplot2::ggtitle("Daily Overlay Per Subject (LOESS Smoothing)")+
+      ggplot2::ylab("Sensor BG (mg/dL)")+
+      ggplot2::xlab("Time (hour)")+
+      ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))+
+      ggplot2::labs(colour = "Subject ID")+
+      ggplot2::scale_x_datetime(labels = function(x) format(x, format = "%H:%M"))+
+      ggplot2::ylim(0,400)
+    return(AGPloess)
+  })
   # Downloadable csv of selected dataset
   output$downloadData <- downloadHandler(
     filename = "temp.csv",
