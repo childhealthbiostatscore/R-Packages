@@ -43,19 +43,12 @@ ui <- fluidPage(
                                Semicolon = ";",
                                Tab = "\t"),
                    selected = ","),
-      
-      # Input: Select quotes
-      radioButtons("quote", "Quote",
-                   choices = c(None = "",
-                               "Double Quote" = '"',
-                               "Single Quote" = "'"),
-                   selected = '"'),
-      
-      # Horizontal line ----
+      # Horizontal line 
       tags$hr(),
-      # Download button
-      downloadButton("downloadData", "Download Results")
-      
+      # Download buttons
+      downloadButton("downloadData", "Download Summary Measures"),
+      downloadButton("downloadTukey", "Download Tukey Plot"),
+      downloadButton("downloadLoess", "Download Loess Plot")
     ),
     
     # Main panel for displaying outputs
@@ -89,7 +82,7 @@ server <- function(input, output) {
         df <- read.csv(input$file1$datapath,
                        header = input$header,
                        sep = input$sep,
-                       quote = input$quote)
+                       quote = input$quote,na.strings = "")
       },
       error = function(e) {
         # return a safeError if a parsing error occurs
@@ -595,7 +588,14 @@ server <- function(input, output) {
   output$summary <- renderTable({summ()},striped = T,rownames = T)
   
   # Plots 
-  output$tukey <- renderPlot({
+  tukey <- reactive({
+    table <- data()
+    dateparseorder <- c("mdy HM","mdy HMS","mdY HM","mdY HMS","dmy HM","dmy HMS",
+                        "dmY HM","dmY HMS","Ymd HM","Ymd HMS","ymd HM","ymd HMS",
+                        "Ydm HM","Ydm HMS","ydm HM","ydm HMS")
+    table$timestamp <- 
+      lubridate::parse_date_time(table$timestamp,dateparseorder,tz = "UTC")
+    table <- table[!is.na(table$sensorglucose),]
     table$hour <- lubridate::round_date(table$timestamp,"hour")
     table$time <- 
       as.POSIXct(strftime(table$timestamp,format = "%H:%M"),
@@ -654,12 +654,23 @@ server <- function(input, output) {
       ggplot2::ylim(0,400)
     return(AGPtukey)
   })
+  output$tukey <- renderPlot({tukey()})
   # Render Loess plot
-  output$loess <- renderPlot({
+  loess <- reactive({
+    table <- data()
+    dateparseorder <- c("mdy HM","mdy HMS","mdY HM","mdY HMS","dmy HM","dmy HMS",
+                        "dmY HM","dmY HMS","Ymd HM","Ymd HMS","ymd HM","ymd HMS",
+                        "Ydm HM","Ydm HMS","ydm HM","ydm HMS")
+    table$timestamp <- 
+      lubridate::parse_date_time(table$timestamp,dateparseorder,tz = "UTC")
+    table$time <- 
+      as.POSIXct(strftime(table$timestamp,format = "%H:%M"),
+                 format = "%H:%M")
+    table <- table[!is.na(table$sensorglucose),]
     AGPloess <- 
       ggplot2::ggplot(table, ggplot2::aes(x = table$time, y = table$sensorglucose))+
-      ggplot2::geom_smooth(ggplot2::aes(y = table$sensorglucose,color = table$subjectid),se = FALSE)+
-      ggplot2::geom_point(ggplot2::aes(y = table$sensorglucose, color = table$subjectid),shape = ".")+
+      ggplot2::geom_smooth(ggplot2::aes(y = table$sensorglucose),se = FALSE)+
+      ggplot2::geom_point(ggplot2::aes(y = table$sensorglucose),shape = ".")+
       ggplot2::ggtitle("Daily Overlay Per Subject (LOESS Smoothing)")+
       ggplot2::ylab("Sensor BG (mg/dL)")+
       ggplot2::xlab("Time (hour)")+
@@ -669,14 +680,32 @@ server <- function(input, output) {
       ggplot2::ylim(0,400)
     return(AGPloess)
   })
+  output$loess <- renderPlot({loess()})
   # Downloadable csv of selected dataset
   output$downloadData <- downloadHandler(
-    filename = "temp.csv",
+    filename = "cgm_summary.csv",
     content = function(file) {
       write.csv(summ(),file,row.names = T)
     }
   )
-  
+  # Download Tukey plot
+  output$downloadTukey <- downloadHandler(
+    filename = "tukey.png",
+    content = function(file) {
+      png(file,width=8,height=6,units="in",res=1200)
+      print(tukey())
+      dev.off()
+      
+    })
+  # Download Loess plot
+  output$downloadLoess <- downloadHandler(
+    filename = "loess.png",
+    content = function(file) {
+      png(file,width=6,height=6,units="in",res=1200)
+      print(loess())
+      dev.off()
+      
+    })
 }
 
 # Create Shiny app ----
