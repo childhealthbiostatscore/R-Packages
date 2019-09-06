@@ -39,7 +39,7 @@ ui <- fluidPage(
       radioButtons("removegaps", "Remove Gaps?",
                    choices = c("Yes" = T,
                                "No" = F),
-                   selected = '"'),
+                   selected = F),
       
       # Horizontal line ----
       tags$hr(),
