@@ -10,6 +10,9 @@
 #-------------------------------------------------------------------------------
 
 library(shiny)
+library(pastecs)
+library(pracma)
+library(zoo)
 library(ggplot2)
 
 # Define UI for data upload app ----
