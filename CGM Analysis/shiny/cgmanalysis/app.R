@@ -30,11 +30,12 @@ ui <- fluidPage(
                 accept = c("text/csv",
                            "text/comma-separated-values,text/plain",
                            ".csv")),
-      
-      # Input: Select quotes
-      radioButtons("filename", "File Name",
-                   choices = c("File Name" = T,
-                               "ID Field" = F),
+      # Input: Gap fill option
+      numericInput("gapfill", "Maximum Gap Length to Fill (minutes):", 20),
+      # Input: Remove gaps options
+      radioButtons("removegaps", "Remove Gaps?",
+                   choices = c("Yes" = T,
+                               "No" = F),
                    selected = '"'),
       
       # Horizontal line ----
@@ -76,6 +77,10 @@ server <- function(input, output) {
     # having a comma separator causes `read.csv` to error
     tryCatch(
       {
+        dateparseorder <- c("mdy HM","mdy HMS","mdY HM","mdY HMS","dmy HM","dmy HMS",
+                            "dmY HM","dmY HMS","Ymd HM","Ymd HMS","ymd HM","ymd HMS",
+                            "Ydm HM","Ydm HMS","ydm HM","ydm HMS")
+        filename <- F
         ext <- tools::file_ext(input$file1$datapath)
         enc <- base::as.character(readr::guess_encoding(input$file1$datapath)[1,1])
         if (ext == "txt") {
@@ -120,13 +125,13 @@ server <- function(input, output) {
         
         # Format columns.
         if (cgmtype == "diasend") {
-          if (input$filename == F) {
+          if (filename == F) {
             id <- base::colnames(table)[2]
           } else {id <- sub("\\..*","",basename(input$file1$datapath))}
           table <- table[-c(1:base::which(table[,1] == "Time")),]
           base::colnames(table) <- c("timestamp","sensorglucose")
         } else if (cgmtype == "carelink") {
-          if (input$filename == F) {
+          if (filename == F) {
             id <- table$Patient.ID[1]
           } else {id <- sub("\\..*","",basename(input$file1$datapath))}
           table <- table[-c(1:6),]
@@ -139,7 +144,7 @@ server <- function(input, output) {
           base::colnames(table) <- c('timestamp','sensorglucose')
         } else if (cgmtype == "dexcom") {
           if ('Glucose.Value..mg.dL.' %in% colnames(table)) {
-            if (input$filename == F) {
+            if (filename == F) {
               id <- table$Patient.Info[3]
             } else {id <- sub("\\..*","",basename(input$file1$datapath))}
             if ('Timestamp..YYYY.MM.DDThh.mm.ss.' %in% colnames(table)) {
@@ -150,14 +155,14 @@ server <- function(input, output) {
             base::colnames(table) <- c('timestamp','sensorglucose')
             table$timestamp <- base::sub("T"," ",table$timestamp)
           } else {
-            if (input$filename == F) {
+            if (filename == F) {
               id <- table$PatientInfoValue[1]
             } else {id <- sub("\\..*","",basename(input$file1$datapath))}
             table <- table[,c("GlucoseDisplayTime","GlucoseValue")]
             base::colnames(table) <- c('timestamp','sensorglucose')
           }
         } else if (cgmtype == "libre") {
-          if (input$filename == F) {
+          if (filename == F) {
             id <- table[1,1]
           } else {id <- sub("\\..*","",basename(input$file1$datapath))}
           base::colnames(table) <- table[2,]
@@ -165,7 +170,7 @@ server <- function(input, output) {
           table <- table[,c("Meter Timestamp","Historic Glucose(mg/dL)")]
           base::colnames(table) <- c('timestamp','sensorglucose')
         } else if (cgmtype == "libre pro") {
-          if (input$filename == F) {
+          if (filename == F) {
             id <- table[1,1]
           } else {id <- sub("\\..*","",basename(input$file1$datapath))}
           base::colnames(table) <- table[2,]
@@ -173,7 +178,7 @@ server <- function(input, output) {
           table <- table[,c("Time","Historic Glucose (mg/dL)")]
           base::colnames(table) <- c('timestamp','sensorglucose')
         } else if (cgmtype == "manual") {
-          if (input$filename == F) {
+          if (filename == F) {
             id <- table[,1][1]
           } else {id <- sub("\\..*","",basename(input$file1$datapath))}
           table$sensorglucose <- 
@@ -183,7 +188,7 @@ server <- function(input, output) {
           table <- table[,-c(1)]
         } else if (cgmtype == "ipro") {
           base::colnames(table) <- table[11,]
-          if (input$filename == F) {
+          if (filename == F) {
             id <- table[2,2]
           } else {id <- sub("\\..*","",basename(input$file1$datapath))}
           table <- table[-c(1:11),]
@@ -216,7 +221,7 @@ server <- function(input, output) {
         interval <- pracma::Mode(base::diff(base::as.numeric(table$timestamp)))
         
         # Clean data (optional).
-        if (removegaps == TRUE) {
+        if (input$removegaps == TRUE) {
           # Remove first rows without sensor glucose data.      
           if (is.na(table$sensorglucose[1])) {
             table <- 
@@ -232,7 +237,7 @@ server <- function(input, output) {
                                 min(abs(as.numeric(table$timestamp) - hour4)))[1])),]
           
           # Fill in small sensor glucose data gaps. 
-          if (gapfill == TRUE) {
+          if (input$gapfill == TRUE) {
             table$sensorglucose <- zoo::na.approx(table$sensorglucose,na.rm = FALSE,
                                                   maxgap = (maximumgap*60)/interval)
           }
