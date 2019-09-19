@@ -68,16 +68,14 @@ cleandata <- function(inputdirectory,
         table <- utils::read.csv(files[f],
                                  stringsAsFactors = FALSE,
                                  header = TRUE,
-                                 na.strings = "",
-                                 skipNul = TRUE,
-                                 fileEncoding = enc)
+                                 na.strings = "")
     } else if (ext == "xls" | ext == "xlsx" | ext == "xlsm") {
           table <- readxl::read_excel(files[f])
         }
     
     if (base::ncol(table) == 3 && base::colnames(table)[3] == "X" | base::ncol(table) == 2) {
       cgmtype <- "diasend"
-    } else if (base::ncol(table) == 18) {
+    } else if (base::ncol(table) == 18 | base::ncol(table) == 19) {
       cgmtype <- "libre"
     } else if (base::ncol(table) == 4) {
       cgmtype <- "libre pro"
@@ -91,8 +89,7 @@ cleandata <- function(inputdirectory,
     } else if (base::ncol(table) == 17 | base::ncol(table) == 22 | base::ncol(table) == 34) {
       cgmtype <- "ipro"
     } else {
-      stop(base::paste("File '",files[f],"' is formatted incorrectly, and the 
-                       data cannot be read.",sep = ""))
+      stop(base::paste("File '",files[f],"' is formatted incorrectly and the data cannot be read.",sep = ""))
       }
       
 # Format columns.
