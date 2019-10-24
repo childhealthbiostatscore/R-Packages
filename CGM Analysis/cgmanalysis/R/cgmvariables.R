@@ -47,6 +47,7 @@
 cgmvariables <- function(inputdirectory,
                          outputdirectory = tempdir(),
                          outputname = "REDCap Upload",
+                         customintervals = list(NULL),
                          aboveexcursionlength = 35,
                          belowexcursionlength = 10,
                          magedef = "1sd",
@@ -294,6 +295,22 @@ cgmvariables <- function(inputdirectory,
       ((base::sum(BGinrange) * (interval/60))/
          (base::length(table$sensorglucose) * (interval/60))) * 100
     
+# Custom intervals
+    if(!is.null(customintervals[[1]])) {
+      lows <- unlist(lapply(customintervals, '[[', 1))
+      highs <- unlist(lapply(customintervals, '[[', 2))
+      for (r in 1:length(customintervals)) {
+        BGinrange <- base::as.numeric(table$sensorglucose[base::which(!is.na(table$sensorglucose))],
+                                  length = 1)
+        BGinrange <- ifelse(BGinrange %in% lows[r]:highs[r], 1,0)
+        minname <- paste0("min_spent_",lows[r],"_",highs[r])
+        cgmupload[minname,f] <- base::sum(BGinrange) * (interval/60)
+        percname <- paste0("percent_time_",lows[r],"_",highs[r])
+        cgmupload[percname,f] <- 
+          ((base::sum(BGinrange) * (interval/60))/
+             (base::length(table$sensorglucose) * (interval/60))) * 100
+      }
+    }
 # Find daytime AUC.
     daytime_indexes <- 
       base::which(base::as.numeric(base::format(table$timestamp,"%H")) %in% 
