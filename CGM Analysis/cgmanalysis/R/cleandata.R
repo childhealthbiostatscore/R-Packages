@@ -28,7 +28,9 @@
 #' outputdirectory = tempdir(),
 #' removegaps = TRUE,
 #' gapfill = TRUE,
-#' maximumgap = 20)
+#' maximumgap = 20,
+#' id_filename = F,
+#' verbose = F)
 #' @examples \dontrun{cleandata(system.file("extdata", "De-identified",
 #' package = "cgmanalysis"))}
 #' @return

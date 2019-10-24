@@ -7,6 +7,7 @@
 cgmvariables(inputdirectory,
 outputdirectory = tempdir(),
 outputname = "REDCap Upload",
+customintervals = list(NULL),
 aboveexcursionlength = 35,
 belowexcursionlength = 10,
 magedef = "1sd",
@@ -14,7 +15,7 @@ congan = 1,
 daystart = 6,
 dayend = 22,
 format = "rows",
-printname = T)
+printname = F)
 }
 \arguments{
 \item{inputdirectory}{The directory containing cleaned CSV files for
@@ -25,6 +26,12 @@ spreadsheet to be written.}
 
 \item{outputname}{The name of the file containing final CGM variables 
 (without the file extension).}
+
+\item{customintervals}{A list of custom blood glucose intervals. Minutes and 
+percent time below the lower bound, in the specified range, and above the 
+upper bound are calculated for each interval in the list. Number of 
+excursions below the lower bound and above the upper bound are also 
+calculated for each interval.}
 
 \item{aboveexcursionlength}{The number of minutes blood sugar must be above 
 threshold to count an excursion.}

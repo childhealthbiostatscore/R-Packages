@@ -36,6 +36,7 @@
 #' @usage cgmvariables(inputdirectory,
 #' outputdirectory = tempdir(),
 #' outputname = "REDCap Upload",
+#' customintervals = list(NULL),
 #' aboveexcursionlength = 35,
 #' belowexcursionlength = 10,
 #' magedef = "1sd",
@@ -43,7 +44,7 @@
 #' daystart = 6,
 #' dayend = 22,
 #' format = "rows",
-#' printname = T)
+#' printname = F)
 #' @examples cgmvariables(system.file("extdata","Cleaned",package = "cgmanalysis"))
 #' @return A data frame containing calculated CGM variables, with each column
 #' representing one CGM file.

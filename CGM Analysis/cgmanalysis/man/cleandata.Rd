@@ -8,7 +8,9 @@ cleandata(inputdirectory,
 outputdirectory = tempdir(),
 removegaps = TRUE,
 gapfill = TRUE,
-maximumgap = 20)
+maximumgap = 20,
+id_filename = F,
+verbose = F)
 }
 \arguments{
 \item{inputdirectory}{The directory containing CSV files for cleaning prior 
@@ -26,6 +28,12 @@ or equal to maximumgap will be interpolated rather than removed.}
 
 \item{maximumgap}{Allows the user to determine the longest data gap (in 
 minutes) that will be interpolated.}
+
+\item{id_filename}{If true, the file name will be used for subject ID
+rather than the ID contained in the data.}
+
+\item{verbose}{If true, each file name will print as the program runs for 
+troubleshooting purposes.}
 }
 \description{
 This function returns cleaned CGM files for analysis. Files must not be 
