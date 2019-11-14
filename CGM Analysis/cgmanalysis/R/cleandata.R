@@ -72,7 +72,7 @@ cleandata <- function(inputdirectory,
                                  header = TRUE,
                                  na.strings = "")
     } else if (ext == "xls" | ext == "xlsx" | ext == "xlsm") {
-          table <- readxl::read_excel(files[f])
+          table <- suppressMessages(readxl::read_excel(files[f]))
         }
     
     if (base::ncol(table) == 3 && base::colnames(table)[3] == "X" | base::ncol(table) == 2) {
@@ -163,6 +163,11 @@ cleandata <- function(inputdirectory,
         id <- table[2,2]
       } else {id <- sub("\\..*","",basename(files[f]))}
       table <- table[-c(1:11),]
+      if (grepl("- | /",table$Timestamp[1]) == F) {
+        table$Timestamp <- base::as.POSIXct(as.numeric(table$Timestamp)* (60*60*24), 
+                                   origin = "1899-12-30",
+                                   tz = "UTC")
+      }
       table$Timestamp <- base::sub("[.]00","",table$Timestamp)
       table <- table[,c("Timestamp","Sensor Glucose (mg/dL)")]
       base::colnames(table) <- c('timestamp','sensorglucose')
@@ -257,10 +262,11 @@ cleandata <- function(inputdirectory,
     table$subjectid[1] <- id
     table$subjectid[2] <- recordstart
     table$subjectid[3] <- removaltime
+    table$subjectid <- as.character(table$subjectid)
     table <-table[,c("subjectid","timestamp","sensorglucose")]
     filename <- 
       base::paste(outputdirectory,"/",tools::file_path_sans_ext(
         basename(files[f])),".csv",sep = "")
-    utils::write.csv(table,file = filename,row.names = FALSE)
+    utils::write.csv(as.data.frame(table),file = filename,row.names = FALSE)
   }
 }
