@@ -90,6 +90,8 @@ cleandata <- function(inputdirectory,
       cgmtype <- "manual"
     } else if (base::ncol(table) == 17 | base::ncol(table) == 22 | base::ncol(table) == 34) {
       cgmtype <- "ipro"
+    } else if (base::ncol(table) == 6) {
+      cgmtype <- "tslimg4"
     } else {
       stop(base::paste("File '",files[f],"' is formatted incorrectly and the data cannot be read.",sep = ""))
       }
@@ -171,6 +173,16 @@ cleandata <- function(inputdirectory,
       table$Timestamp <- base::sub("[.]00","",table$Timestamp)
       table <- table[,c("Timestamp","Sensor Glucose (mg/dL)")]
       base::colnames(table) <- c('timestamp','sensorglucose')
+    } else if (cgmtype == "tslimg4") {
+      row <- base::which(table[,1] == "DeviceType")
+      base::colnames(table) <- table[row,]
+      if (id_filename == F) {
+        id <- table[row - 7,2]
+      } else {id <- sub("\\..*","",basename(files[f]))}
+      table <- table[-c(1:row),]
+      table$timestamp <- table$EventDateTime
+      table$sensorglucose <- as.numeric(table$`Readings (CGM / BGM)`)
+      table <- table[,c('timestamp','sensorglucose')]
     }
 
 # Make sensor glucose numeric, sort table by timestamp, remove duplicate rows. 
