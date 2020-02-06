@@ -73,7 +73,22 @@ cleandata <- function(inputdirectory,
                                  na.strings = "")
     } else if (ext == "xls" | ext == "xlsx" | ext == "xlsm") {
           table <- suppressMessages(readxl::read_excel(files[f]))
-        }
+    } else if (ext == "xml") {
+      doc <- xmlParse(files[f])
+      l <- xmlToList(doc)
+      id <- l$.attrs[["StudyIdentifier"]]
+      l <- l[["GlucoseReadings"]]
+      times <- lapply(l, function(x) {x[["DisplayTime"]]})
+      times <- do.call(rbind,times)
+      sensor <- lapply(l, function(x) {x[["Value"]]})
+      sensor <- do.call(rbind,sensor)
+      table <- cbind(times,sensor)
+      table <- as.data.frame(table)
+      colnames(table) <- c("timestamp","sensorglucose")
+      table$subjectid <- NA
+      table$subjectid[1] <- id
+      table <- table[,c("subjectid","timestamp","sensorglucose")]
+    }
     
     if (base::ncol(table) == 3 && base::colnames(table)[3] == "X" | base::ncol(table) == 2) {
       cgmtype <- "diasend"
@@ -155,7 +170,7 @@ cleandata <- function(inputdirectory,
         id <- table[,1][1]
       } else {id <- sub("\\..*","",basename(files[f]))}
       table$sensorglucose <- 
-        base::suppressWarnings(base::as.numeric(table$sensorglucose))
+        base::suppressWarnings(base::as.numeric(as.character(table$sensorglucose)))
       table <- 
         table[-c(max(base::which(!is.na(table$sensorglucose)))+1:nrow(table)),]
       table <- table[,-c(1)]
