@@ -154,7 +154,8 @@ cleandata <- function(inputdirectory,
       } else {id <- sub("\\..*","",basename(files[f]))}
       base::colnames(table) <- table[2,]
       table <- table[-c(1:2),]
-      table <- table[,c("Meter Timestamp","Historic Glucose(mg/dL)")]
+      table <- table[,c(grep("Timestamp",colnames(table)),
+                        grep("Glucose",colnames(table))[1])]
       base::colnames(table) <- c('timestamp','sensorglucose')
     } else if (cgmtype == "libre pro") {
       if (id_filename == F) {
