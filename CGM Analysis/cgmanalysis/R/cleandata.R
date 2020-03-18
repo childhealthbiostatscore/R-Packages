@@ -75,7 +75,7 @@ cleandata <- function(inputdirectory,
     } else if (ext == "xml") {
       doc <- XML::xmlParse(files[f])
       l <- XML::xmlToList(doc)
-      id <- l$.attrs[["StudyIdentifier"]]
+      id <- l$.attrs[["Id"]]
       l <- l[["GlucoseReadings"]]
       times <- lapply(l, function(x) {x[["DisplayTime"]]})
       times <- do.call(rbind,times)
@@ -121,7 +121,6 @@ cleandata <- function(inputdirectory,
       if (id_filename == F) {
         id <- table$Patient.ID[1]
       } else {id <- sub("\\..*","",basename(files[f]))}
-      table <- table[-c(1:6),]
       base::colnames(table) <- table[base::which(table[,3] == "Sensor")+1,]
       table <- table[-c(1:(base::which(table[,3] == "Sensor")+1)),]
       table <- table[-c(base::which(!is.na(table$`Event Marker`))),]
