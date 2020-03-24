@@ -38,7 +38,7 @@
 #' @usage cgmvariables(inputdirectory,
 #' outputdirectory = tempdir(),
 #' outputname = "REDCap Upload",
-#' customintervals = list(NULL),
+#' customintervals = list(c(70,120)),
 #' aboveexcursionlength = 35,
 #' belowexcursionlength = 10,
 #' magedef = "1sd",
