@@ -91,7 +91,7 @@ cleandata <- function(inputdirectory,
       table = read.delim(files[f])
     }
     
-    if (base::ncol(table) == 3 && base::colnames(table)[3] == "X" | base::ncol(table) == 2) {
+    if (base::ncol(table) == 3 & base::colnames(table)[3] == "X" | base::ncol(table) == 2) {
       cgmtype <- "diasend"
     } else if (base::ncol(table) == 18 | base::ncol(table) == 19) {
       cgmtype <- "libre"
