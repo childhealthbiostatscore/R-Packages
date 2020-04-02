@@ -194,6 +194,7 @@ cleandata <- function(inputdirectory,
       table <- table[,c("Timestamp","Sensor Glucose (mg/dL)")]
       base::colnames(table) <- c('timestamp','sensorglucose')
     } else if (cgmtype == "asc") {
+      id = sub("\\..*","",basename(files[f]))
       table$timestamp = paste(table$Date,table$Time)
       table$sensorglucose = table$Value
       table = table[,c('timestamp','sensorglucose')]
