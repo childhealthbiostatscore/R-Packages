@@ -113,7 +113,7 @@ cgmvariables <- function(inputdirectory,
                                       base::min(table$timestamp,na.rm = T),
                                       units = "secs"))
     cgmupload["percent_cgm_wear",f] <- 
-      base::round(((base::length(which(!is.na(table$sensorglucose)))/(totaltime/interval))*100),2)
+      base::floor(((base::length(which(!is.na(table$sensorglucose)))/(totaltime/interval))*100))
     
     table <- table[,-c(1)]
     table <- table[stats::complete.cases(table),]
