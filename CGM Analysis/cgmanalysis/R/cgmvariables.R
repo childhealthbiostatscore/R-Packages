@@ -626,5 +626,5 @@ cgmvariables <- function(inputdirectory,
     cgmupload <- cgmupload[-1,]
   }
   filename <- base::paste(outputdirectory,"/",outputname,".csv",sep = "")
-  utils::write.csv(cgmupload, file = filename,row.names = FALSE)
+  utils::write.csv(cgmupload, file = filename,row.names = FALSE,na = "")
 }
