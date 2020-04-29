@@ -88,7 +88,7 @@ cleandata <- function(inputdirectory,
       table$subjectid[1] <- id
       table <- table[,c("subjectid","timestamp","sensorglucose")]
     } else if (ext == "ASC") {
-      table = read.delim(files[f])
+      table = utils::read.delim(files[f])
     }
     
     if (base::ncol(table) == 3 & base::colnames(table)[3] == "X" | base::ncol(table) == 2) {

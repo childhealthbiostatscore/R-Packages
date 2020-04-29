@@ -38,7 +38,7 @@
 #' @usage cgmvariables(inputdirectory,
 #' outputdirectory = tempdir(),
 #' outputname = "REDCap Upload",
-#' customintervals = list(c(70,120)),
+#' customintervals = list(c(250,400)),
 #' aboveexcursionlength = 35,
 #' belowexcursionlength = 10,
 #' magedef = "1sd",
@@ -56,7 +56,7 @@
 cgmvariables <- function(inputdirectory,
                          outputdirectory = tempdir(),
                          outputname = "REDCap Upload",
-                         customintervals = list(NULL),
+                         customintervals = list(c(250,400)),
                          aboveexcursionlength = 35,
                          belowexcursionlength = 10,
                          magedef = "1sd",
@@ -96,7 +96,8 @@ cgmvariables <- function(inputdirectory,
     if(printname == T) {
       print(basename(files[f]))
     }
-    
+# Column names to lower case
+    colnames(table) = tolower(colnames(table))
     cgmupload["subject_id",f] <- table$subjectid[1]
 # Format columns.    
     table$timestamp <- 
@@ -114,12 +115,11 @@ cgmvariables <- function(inputdirectory,
                                       units = "secs"))
     cgmupload["percent_cgm_wear",f] <- 
       base::floor(((base::length(which(!is.na(table$sensorglucose)))/(totaltime/interval))*100))
-    
-    table <- table[,-c(1)]
-    table <- table[stats::complete.cases(table),]
-    
     cgmupload["num_days_good_data",f] <- 
       base::round(base::length(table$sensorglucose)/(86400/interval))
+    
+    table <- table[!is.na(table$timestamp) & !is.na(table$sensorglucose),]
+    
     cgmupload["total_sensor_readings",f] <- 
       base::as.numeric(base::length(base::which(!is.na(table$sensorglucose))))
     cgmupload["average_sensor",f] <- 
@@ -361,9 +361,14 @@ cgmvariables <- function(inputdirectory,
       }
     }
 # Find daytime AUC.
-    daytime_indexes <- 
-      base::which(base::as.numeric(base::format(table$timestamp,"%H")) %in% 
-                    daystart:dayend)
+    if ("wake" %in% colnames(table)) {
+      daytime_indexes <- 
+        base::which(table$wake == 1)
+    } else {
+      daytime_indexes <- 
+        base::which(base::as.numeric(base::format(table$timestamp,"%H")) %in% 
+                      daystart:dayend)
+    }
     daytime_sensor <- table$sensorglucose[daytime_indexes]
     xaxis <- 
       base::seq(from = 0, length.out = base::length(daytime_sensor),by = 
@@ -419,12 +424,14 @@ cgmvariables <- function(inputdirectory,
     cgmupload["daytime_max_sensor_glucose",f] <- base::max(daytime_sensor)
     cgmupload["daytime_sd",f] <- stats::sd(daytime_sensor)
 
-    
-    
 # Nighttime AUC.
-    nighttime_indexes <- 
-      base::which(base::as.numeric(base::format(table$timestamp,"%H")) %in% 
-                    allhours[base::which(!(0:23 %in% daystart:dayend))])
+    if ("wake" %in% colnames(table)) {
+      nighttime_indexes <- base::which(table$wake == 0)
+    } else {
+      nighttime_indexes <- 
+        base::which(base::as.numeric(base::format(table$timestamp,"%H")) %in% 
+                      allhours[base::which(!(0:23 %in% daystart:dayend))])
+    }
     if (length(nighttime_indexes) > 0) {
       nighttime_sensor <- table$sensorglucose[nighttime_indexes]
       xaxis <- 
