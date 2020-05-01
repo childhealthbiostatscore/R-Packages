@@ -103,7 +103,7 @@ cgmvariables <- function(inputdirectory,
     table$timestamp <- 
       base::as.POSIXct(lubridate::parse_date_time(table$timestamp,
                                                   dateparseorder,tz = "UTC"))
-    table$sensorglucose <- base::as.numeric(table$sensorglucose)
+    table$sensorglucose <- suppressWarnings(base::as.numeric(table$sensorglucose))
     interval <- pracma::Mode(base::diff(base::as.numeric(table$timestamp)))
     interval <- base::abs(interval)
     cgmupload["date_cgm_placement", f] <- 
