@@ -1,4 +1,5 @@
 library(plotly)
+library(dplyr)
 
 files = list.files("/home/tim/Desktop/CGMs",full.names = T)
 
@@ -26,15 +27,22 @@ summ = df %>% dplyr::group_by(id,agp) %>%
   summarise(sg = mean(sensorglucose,na.rm = T)) %>% 
   mutate(label = format(agp,format = "%H:%M")) %>% ungroup()
 
+smooth = loess(summ$sg~as.numeric(summ$agp))
+
 # Plotly
-p = summ %>% plotly::group_by(id) %>% 
-  plot_ly(x = ~agp, y = ~sg,text=~paste(id,label,round(sg))) 
-add_lines(p,alpha = 0.1,hoverinfo = 'text')
+summ %>% plotly::group_by(id) %>% 
+  plot_ly(x = ~agp, y = ~sg,
+          text=~paste("ID:",id,"\n","Time:",label,"\n","Mean SG:",round(sg))) %>%
+  add_lines(alpha = 0.1,hoverinfo = 'text') %>%
+  add_lines(y=smooth$fitted) %>%
+  layout(xaxis = list(
+    type = 'date',
+    tickformat = "%H:%M",
+    title = "Time of Day"
+  ), yaxis = list(title = "Mean Sensor Glusose (mg/dL)"))
 
 # ggplot2
 p = ggplot(summ,aes(x = agp,y = sg)) + 
-  geom_line(aes(group = id),alpha = 0.1) +
+  geom_line(aes(group = id),alpha = 0.2) +
   scale_x_datetime(labels = function(x) format(x, format = "%H:%M")) +
   xlab("Time") + ylab("Sensor Glucose (mg/dL)")
-
-ggplotly(p,text)
