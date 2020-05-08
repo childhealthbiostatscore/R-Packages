@@ -11,15 +11,16 @@ l = lapply(files, function(x){
   df$timestamp = sub("T"," ",df$timestamp)
   df$id = id
   df = df[,c("id","timestamp","sensorglucose")]
+  df = df[complete.cases(df),]
   df
 })
 
 df = do.call(rbind,l)
 
 df$sensorglucose = suppressWarnings(as.numeric(df$sensorglucose))
+df$timestamp = lubridate::ymd_hms(df$timestamp)
 df = df[complete.cases(df),]
 df$id = as.factor(df$id)
-df$timestamp = lubridate::ymd_hms(df$timestamp)
 df$agp = lubridate::round_date(df$timestamp,unit = "5 minutes")
 df$agp = as.POSIXct(strftime(df$agp,format = "%H:%M"),format = "%H:%M")
 
@@ -27,22 +28,27 @@ summ = df %>% dplyr::group_by(id,agp) %>%
   summarise(sg = mean(sensorglucose,na.rm = T)) %>% 
   mutate(label = format(agp,format = "%H:%M")) %>% ungroup()
 
+summ = summ %>% group_by(id) %>%
+  mutate(id_spline = as.numeric(predict(smooth.spline(sg))$y)) %>% ungroup()
+
 smooth = loess(summ$sg~as.numeric(summ$agp))
 
 # Plotly
+# Regular AGP
 summ %>% plotly::group_by(id) %>% 
-  plot_ly(x = ~agp, y = ~sg,
-          text=~paste("ID:",id,"\n","Time:",label,"\n","Mean SG:",round(sg))) %>%
-  add_lines(alpha = 0.1,hoverinfo = 'text') %>%
-  add_lines(y=smooth$fitted) %>%
-  layout(xaxis = list(
+  plot_ly(x = ~agp, y = ~id_spline,
+          text=~paste0("ID:",id,"\n","Time:",label,"\n","Mean SG:",round(sg))) %>%
+  add_lines(alpha = 0.2,hoverinfo = 'text') %>%
+  add_lines(y=smooth$fitted,text=~paste0("Time:",label,"\n","Mean SG:",round(sg)),
+            hoverinfo = 'text') %>%
+  layout(
+    xaxis = list(
     type = 'date',
     tickformat = "%H:%M",
-    title = "Time of Day"
-  ), yaxis = list(title = "Mean Sensor Glusose (mg/dL)"))
-
-# ggplot2
-p = ggplot(summ,aes(x = agp,y = sg)) + 
-  geom_line(aes(group = id),alpha = 0.2) +
-  scale_x_datetime(labels = function(x) format(x, format = "%H:%M")) +
-  xlab("Time") + ylab("Sensor Glucose (mg/dL)")
+    title = "Time of Day"), 
+  yaxis = list(
+    title = "Mean Sensor Glusose (mg/dL)",
+    range = c(0,400)))
+# Radial AGP
+summ %>% plotly::plot_ly(type = 'scatterpolar',mode = 'lines') %>%
+  add_trace(r = ~agp,theta = ~id_spline)
