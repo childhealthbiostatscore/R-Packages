@@ -23,14 +23,18 @@ df$agp = lubridate::round_date(df$timestamp,unit = "5 minutes")
 df$agp = as.POSIXct(strftime(df$agp,format = "%H:%M"),format = "%H:%M")
 
 summ = df %>% dplyr::group_by(id,agp) %>%
-  summarise(sg = mean(sensorglucose,na.rm = T))
-
-summ = as.data.frame(summ)
+  summarise(sg = mean(sensorglucose,na.rm = T)) %>% 
+  mutate(label = format(agp,format = "%H:%M")) %>% ungroup()
 
 # Plotly
-summ %>% plotly::group_by(id) %>%
-  plot_ly(x = ~agp, y = ~sg) %>%
-  add_lines(text = id)
+p = summ %>% plotly::group_by(id) %>% 
+  plot_ly(x = ~agp, y = ~sg,text=~paste(id,label,round(sg))) 
+add_lines(p,alpha = 0.1,hoverinfo = 'text')
 
 # ggplot2
-ggplot(summ,aes(x = agp,y = sg)) + geom_smooth(aes(group = id))
+p = ggplot(summ,aes(x = agp,y = sg)) + 
+  geom_line(aes(group = id),alpha = 0.1) +
+  scale_x_datetime(labels = function(x) format(x, format = "%H:%M")) +
+  xlab("Time") + ylab("Sensor Glucose (mg/dL)")
+
+ggplotly(p,text)
