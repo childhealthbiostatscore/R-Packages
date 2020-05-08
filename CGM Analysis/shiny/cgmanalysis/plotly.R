@@ -1,3 +1,4 @@
+library(ggplot2)
 library(plotly)
 library(dplyr)
 
@@ -37,18 +38,39 @@ smooth = loess(summ$sg~as.numeric(summ$agp))
 # Regular AGP
 summ %>% plotly::group_by(id) %>% 
   plot_ly(x = ~agp, y = ~id_spline,
-          text=~paste0("ID:",id,"\n","Time:",label,"\n","Mean SG:",round(sg))) %>%
+          text=~paste0("ID: ",id,"\n","Time: ",label,"\n","Mean SG: ",round(sg))) %>%
   add_lines(alpha = 0.2,hoverinfo = 'text') %>%
-  add_lines(y=smooth$fitted,text=~paste0("Time:",label,"\n","Mean SG:",round(sg)),
+  add_lines(y=smooth$fitted,text=~paste0("Time: ",label,"\n","Mean SG: ",round(sg)),
             hoverinfo = 'text') %>%
   layout(
     xaxis = list(
-    type = 'date',
-    tickformat = "%H:%M",
-    title = "Time of Day"), 
-  yaxis = list(
-    title = "Mean Sensor Glusose (mg/dL)",
-    range = c(0,400)))
+      type = 'date',
+      tickformat = "%H:%M",
+      title = "Time of Day"), 
+    yaxis = list(
+      title = "Mean Sensor Glusose (mg/dL)",
+      range = c(0,400)))
 # Radial AGP
+summ$t = as.numeric((summ$agp - min(summ$agp)))
+summ$t = summ$t/(max(summ$t)/360)
+
 summ %>% plotly::plot_ly(type = 'scatterpolar',mode = 'lines') %>%
-  add_trace(r = ~agp,theta = ~id_spline)
+  add_trace(r = ~id_spline,theta = ~t,alpha = 0.2,
+            text = ~paste0("Time: ",label,"\n","Mean SG: ",round(sg)),
+            hoverinfo = "text") %>%
+  layout(showlegend = TRUE,
+         polar = list(
+           #hole = 0.5,
+           radialaxis = list(
+             visible = TRUE,
+             ticks = "outside",
+             angle = 90,
+             tickangle = 90),
+           angularaxis = list(
+             rotation = 90,
+             direction = 'clockwise',
+             tickvals = c(0,180),
+             ticktext = c("00:00","12:00")
+           )
+         )
+  )
