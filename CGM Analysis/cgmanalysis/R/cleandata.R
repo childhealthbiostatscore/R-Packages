@@ -100,7 +100,7 @@ cleandata <- function(inputdirectory,
       cgmtype <- "libre pro"
     } else if (base::ncol(table) == 13 | base::ncol(table) == 14) {
       cgmtype <- "dexcom"
-    } else if (base::ncol(table) == 47) {
+    } else if (base::ncol(table) >= 47) {
       cgmtype <- "carelink"
     } else if (base::ncol(table) == 3 && base::colnames(table)[2] == "timestamp" 
                && base::colnames(table)[3] == 'sensorglucose') {
@@ -116,18 +116,18 @@ cleandata <- function(inputdirectory,
     } else {
       stop(base::paste("File '",files[f],"' is formatted incorrectly and the data cannot be read.",sep = ""))
     }
-    
+    ext <- paste0(".",ext)
     # Format columns.
     if (cgmtype == "diasend") {
       if (id_filename == F) {
         id <- base::colnames(table)[2]
-      } else {id <- sub("\\..*","",basename(files[f]))}
+      } else {id <- sub(ext,"",basename(files[f]))}
       table <- table[-c(1:base::which(table[,1] == "Time")),]
       base::colnames(table) <- c("timestamp","sensorglucose")
     } else if (cgmtype == "carelink") {
       if (id_filename == F) {
         id <- table$Patient.ID[1]
-      } else {id <- sub("\\..*","",basename(files[f]))}
+      } else {id <- sub(ext,"",basename(files[f]))}
       base::colnames(table) <- table[base::which(table[,3] == "Sensor")+1,]
       table <- table[-c(1:(base::which(table[,3] == "Sensor")+1)),]
       table <- table[-c(base::which(!is.na(table$`Event Marker`))),]
@@ -138,7 +138,7 @@ cleandata <- function(inputdirectory,
     } else if (cgmtype == "dexcom") {
       if (id_filename == F) {
         id <- table[3,grep("patient",tolower(colnames(table)))]
-      } else {id <- sub("\\..*","",basename(files[f]))}
+      } else {id <- sub(ext,"",basename(files[f]))}
       table$sensorglucose = table[,grep("glucose",tolower(colnames(table)))[1]]
       table$timestamp = table[,grep("timestamp",tolower(colnames(table)))]
       table = table[,c("timestamp","sensorglucose")]
@@ -146,7 +146,7 @@ cleandata <- function(inputdirectory,
     } else if (cgmtype == "libre") {
     if (id_filename == F) {
       id <- table[1,1]
-    } else {id <- sub("\\..*","",basename(files[f]))}
+    } else {id <- sub(ext,"",basename(files[f]))}
     base::colnames(table) <- table[2,]
     table <- table[-c(1:2),]
     table <- table[,c(grep("Timestamp",colnames(table)),
@@ -155,7 +155,7 @@ cleandata <- function(inputdirectory,
   } else if (cgmtype == "libre pro") {
     if (id_filename == F) {
       id <- table[1,1]
-    } else {id <- sub("\\..*","",basename(files[f]))}
+    } else {id <- sub(ext,"",basename(files[f]))}
     base::colnames(table) <- table[2,]
     table <- table[-c(1:2),]
     table <- table[,c("Time","Historic Glucose (mg/dL)")]
@@ -163,7 +163,7 @@ cleandata <- function(inputdirectory,
   } else if (cgmtype == "manual") {
     if (id_filename == F) {
       id <- table[,1][1]
-    } else {id <- sub("\\..*","",basename(files[f]))}
+    } else {id <- sub(ext,"",basename(files[f]))}
     table$sensorglucose <- 
       base::suppressWarnings(base::as.numeric(as.character(table$sensorglucose)))
     table <- 
@@ -173,7 +173,7 @@ cleandata <- function(inputdirectory,
     base::colnames(table) <- table[11,]
     if (id_filename == F) {
       id <- table[2,2]
-    } else {id <- sub("\\..*","",basename(files[f]))}
+    } else {id <- sub(ext,"",basename(files[f]))}
     table <- table[-c(1:11),]
     if (grepl("- | /",table$Timestamp[1]) == F) {
       table$Timestamp <- base::as.POSIXct(as.numeric(table$Timestamp)* (60*60*24), 
@@ -193,7 +193,7 @@ cleandata <- function(inputdirectory,
     base::colnames(table) <- table[row,]
     if (id_filename == F) {
       id <- table[row - 7,2]
-    } else {id <- sub("\\..*","",basename(files[f]))}
+    } else {id <- sub(ext,"",basename(files[f]))}
     table <- table[-c(1:row),]
     table$timestamp <- table$EventDateTime
     table$sensorglucose <- as.numeric(table$`Readings (CGM / BGM)`)
@@ -201,7 +201,7 @@ cleandata <- function(inputdirectory,
   } else if (cgmtype == "tandem") {
     if (id_filename == F) {
       id <- table[2,2]
-    } else {id <- sub("\\..*","",basename(files[f]))}
+    } else {id <- sub(ext,"",basename(files[f]))}
     colnames(table) <- table[6,]
     table <- table[-c(1:6),]
     table <- table[1:(which(table[,4] == "IOB")[1]-2),]
