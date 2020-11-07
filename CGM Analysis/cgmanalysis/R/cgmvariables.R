@@ -103,6 +103,8 @@ cgmvariables <- function(inputdirectory,
     table$timestamp <- 
       base::as.POSIXct(lubridate::parse_date_time(table$timestamp,
                                                   dateparseorder,tz = "UTC"))
+    table$sensorglucose[table$sensorglucose=="Low"] <- 40
+    table$sensorglucose[table$sensorglucose=="High"] <- 400
     table$sensorglucose <- suppressWarnings(base::as.numeric(table$sensorglucose))
     interval <- pracma::Mode(base::diff(base::as.numeric(table$timestamp)))
     interval <- base::abs(interval)
