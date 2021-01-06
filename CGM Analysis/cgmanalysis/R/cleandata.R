@@ -45,7 +45,7 @@ cleandata <- function(inputdirectory,
   
   # Set system locale to read all characters. Read in file list. Creat output 
   # directory.
-  files <- base::list.files(path = inputdirectory,full.names = TRUE)
+  files <- base::list.files(path = inputdirectory,full.names = TRUE,recursive = T)
   base::dir.create(outputdirectory,showWarnings = FALSE)
   dateparseorder <- c("mdy HM","mdy HMS","mdY HM","mdY HMS","dmy HM","dmy HMS",
                       "dmY HM","dmY HMS","Ymd HM","Ymd HMS","ymd HM","ymd HMS",
@@ -130,7 +130,6 @@ cleandata <- function(inputdirectory,
       } else {id <- sub(ext,"",basename(files[f]))}
       base::colnames(table) <- table[base::which(table[,3] == "Sensor")+1,]
       table <- table[-c(1:(base::which(table[,3] == "Sensor")+1)),]
-      table <- table[-c(base::which(!is.na(table$`Event Marker`))),]
       table$timestamp <- base::paste(table$Date,table$Time)
       table$timestamp <- base::gsub('.{3}$',"",table$timestamp)
       table <- table[,c('timestamp','Sensor Glucose (mg/dL)')]
