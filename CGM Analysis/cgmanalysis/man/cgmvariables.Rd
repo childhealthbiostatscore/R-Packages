@@ -7,7 +7,7 @@
 cgmvariables(inputdirectory,
 outputdirectory = tempdir(),
 outputname = "REDCap Upload",
-customintervals = list(c(250,400)),
+customintervals = list(c(180,250),c(250,400)),
 aboveexcursionlength = 35,
 belowexcursionlength = 10,
 magedef = "1sd",
