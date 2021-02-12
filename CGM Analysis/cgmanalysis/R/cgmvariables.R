@@ -550,8 +550,8 @@ cgmvariables <- function(inputdirectory,
     sd <- stats::sd(table$sensorglucose)
 # Identify turning points, peaks, and nadirs.
     tpoints <- pastecs::turnpoints(table$smoothed)
-    peaks <- base::which(tpoints[["peaks"]] == TRUE)
-    pits <- base::which(tpoints[["pits"]] == TRUE)
+    peaks <- tpoints$pos[tpoints$peaks]
+    pits <- tpoints$pos[tpoints$pits]
 # Calculate the difference between each nadir and its following peak. If the     
 # data starts on a peak, remove it. Otherwise remove the final pit to create an 
 # even number of pits and peaks.
