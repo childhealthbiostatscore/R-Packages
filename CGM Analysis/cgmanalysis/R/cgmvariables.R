@@ -117,8 +117,7 @@ cgmvariables <- function(inputdirectory,
                                       units = "secs"))
     cgmupload["percent_cgm_wear",f] <- 
       base::floor(((base::length(which(!is.na(table$sensorglucose)))/(totaltime/interval))*100))
-    cgmupload["num_days_good_data",f] <- 
-      base::round(base::length(which(!is.na(table$sensorglucose)))/(86400/interval))
+    cgmupload["num_days",f] <- base::length(base::unique(lubridate::date(table$timestamp[base::which(!is.na(table$sensorglucose))])))
     
     table <- table[!is.na(table$timestamp) & !is.na(table$sensorglucose),]
     
