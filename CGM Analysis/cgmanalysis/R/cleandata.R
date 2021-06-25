@@ -126,7 +126,7 @@ cleandata <- function(inputdirectory,
       base::colnames(table) <- c("timestamp","sensorglucose")
     } else if (cgmtype == "carelink") {
       if (id_filename == F) {
-        id <- table$Patient.ID[1]
+        id <- table[1,grep("Patient",colnames(table))]
       } else {id <- sub(ext,"",basename(files[f]))}
       base::colnames(table) <- table[base::which(table[,3] == "Sensor")+1,]
       table <- table[-c(1:(base::which(table[,3] == "Sensor")+1)),]
