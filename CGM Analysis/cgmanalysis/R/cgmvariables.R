@@ -73,10 +73,6 @@ cgmvariables <- function(inputdirectory,
   cgmupload <- 
     base::as.data.frame(base::matrix(nrow = 0,ncol = base::length(files)))
   base::colnames(cgmupload) <- base::rep("Record",base::length(files))
-# Define the order in which lubridate parses dates.  
-  dateparseorder <- c("mdy HM","mdy HMS","mdY HM","mdY HMS","dmy HM","dmy HMS",
-                      "dmY HM","dmY HMS","Ymd HM","Ymd HMS","ymd HM","ymd HMS",
-                      "Ydm HM","Ydm HMS","ydm HM","ydm HMS")
   allhours <- 0:23
 # Iterate through the input directory and calculate CGM variables for each file.
 # The cgmvariables() function only works on CSV files that have been cleaned by 
@@ -100,9 +96,7 @@ cgmvariables <- function(inputdirectory,
     colnames(table) = tolower(colnames(table))
     cgmupload["subject_id",f] <- table$subjectid[1]
 # Format columns.    
-    table$timestamp <- 
-      base::as.POSIXct(lubridate::parse_date_time(table$timestamp,
-                                                  dateparseorder,tz = "UTC"))
+    table$timestamp <- parsedate::parse_date(table$timestamp,approx=F)
     table$sensorglucose[table$sensorglucose=="Low"] <- 40
     table$sensorglucose[table$sensorglucose=="High"] <- 400
     table$sensorglucose <- suppressWarnings(base::as.numeric(table$sensorglucose))

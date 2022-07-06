@@ -47,9 +47,6 @@ cleandata <- function(inputdirectory,
   # directory.
   files <- base::list.files(path = inputdirectory,full.names = TRUE,recursive = T)
   base::dir.create(outputdirectory,showWarnings = FALSE)
-  dateparseorder <- c("mdy HM","mdy HMS","mdY HM","mdY HMS","dmy HM","dmy HMS",
-                      "dmY HM","dmY HMS","Ymd HM","Ymd HMS","ymd HM","ymd HMS",
-                      "Ydm HM","Ydm HMS","ydm HM","ydm HMS")
   
   # Read in data, check CGM type.  
   for (f in 1:base::length(files)) {
@@ -95,7 +92,11 @@ cleandata <- function(inputdirectory,
     if (base::ncol(table) == 3 & base::colnames(table)[3] == "X" | base::ncol(table) == 2) {
       cgmtype <- "diasend"
     } else if (base::ncol(table) == 18 | base::ncol(table) == 19) {
-      cgmtype <- "libre"
+      if (table[2,1] == "Device"){
+        cgmtype <- "libre pro"
+      } else {
+        cgmtype <- "libre"
+      }
     } else if (base::ncol(table) == 4) {
       cgmtype <- "libre pro"
     } else if (base::ncol(table) == 13 | base::ncol(table) == 14) {
@@ -157,7 +158,8 @@ cleandata <- function(inputdirectory,
     } else {id <- sub(ext,"",basename(files[f]))}
     base::colnames(table) <- table[2,]
     table <- table[-c(1:2),]
-    table <- table[,c("Time","Historic Glucose (mg/dL)")]
+    cols = grep("time|historic",tolower(colnames(table)))
+    table <- table[,cols]
     base::colnames(table) <- c('timestamp','sensorglucose')
   } else if (cgmtype == "manual") {
     if (id_filename == F) {
@@ -215,9 +217,8 @@ cleandata <- function(inputdirectory,
     table <- table[-c(base::which(is.na(table$timestamp))),]
   }
   
-  table$timestamp <- 
-    base::as.POSIXct(lubridate::parse_date_time(table$timestamp,
-                                                dateparseorder),tz = "UTC")
+  table$timestamp <- parsedate::parse_date(table$timestamp,approx=F)
+  
   table$sensorglucose <- 
     base::suppressWarnings(base::as.numeric(table$sensorglucose))
   table <- table[base::order(table$timestamp),]

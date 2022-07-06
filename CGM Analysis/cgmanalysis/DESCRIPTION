@@ -1,10 +1,10 @@
 Package: cgmanalysis
 Title: Clean and Analyze Continuous Glucose Monitor Data
-Version: 2.7.2
-Authors@R: person("Tim", "Vigers", email = "timvigers@mailbox.org", role = c("aut", "cre"))
+Version: 2.7.3
+Authors@R: person("Tim", "Vigers", email = "tim.b.vigers@gmail.com", role = c("aut", "cre"))
 Description: This code provides several different functions for cleaning and analyzing continuous glucose monitor data. Currently it works with 'Dexcom', 'iPro 2', 'Diasend', 'Libre', or 'Carelink' data. The cleandata() function takes a directory of CGM data files and prepares them for analysis. cgmvariables() iterates through a directory of cleaned CGM data files and produces a single spreadsheet with data for each file in either rows or columns. The column format of this spreadsheet is compatible with REDCap data upload. cgmreport() also iterates through a directory of cleaned data, and produces PDFs of individual and aggregate AGP plots. Please visit <https://github.com/childhealthbiostatscore/R-Packages/> to download the new-user guide.
 Depends: R (>= 3.4.0)
 License: CC0
 Encoding: UTF-8
-RoxygenNote: 7.1.1
-Imports: ggplot2, lubridate, pracma, zoo, pastecs, tools, readxl, readr, XML
+RoxygenNote: 7.2.0
+Imports: ggplot2, parsedate, lubridate, pracma, zoo, pastecs, tools, readxl, readr, XML
