@@ -10,7 +10,8 @@ removegaps = TRUE,
 gapfill = TRUE,
 maximumgap = 20,
 id_filename = F,
-verbose = F)
+verbose = F,
+unit = "mg/dL")
 }
 \arguments{
 \item{inputdirectory}{The directory containing CSV files for cleaning prior 
@@ -34,6 +35,10 @@ rather than the ID contained in the data.}
 
 \item{verbose}{If true, each file name will print as the program runs for 
 troubleshooting purposes.}
+
+\item{unit}{Default unit is mg/dL. Any other value will multiply the 
+"sensorglucose" column by 18 (i.e. the package assumes that unit != "mg/dL"
+implies that the units are mmol/L).}
 }
 \description{
 This function returns cleaned CGM files for analysis. Files must not be 

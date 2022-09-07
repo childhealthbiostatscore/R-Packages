@@ -16,7 +16,8 @@ daystart = 6,
 dayend = 22,
 id_filename = F,
 format = "rows",
-printname = F)
+printname = F,
+unit = "mg/dL")
 }
 \arguments{
 \item{inputdirectory}{The directory containing cleaned CSV files for
@@ -57,6 +58,11 @@ rather than the ID contained in the data.}
 \item{format}{Whether observations are in rows or columns.}
 
 \item{printname}{Whether or not to print each file name (for troubleshooting).}
+
+\item{unit}{Default unit is mg/dL. Any other value will multiply the 
+"sensorglucose" column by 18 (i.e. the package assumes that unit != "mg/dL"
+implies that the units are mmol/L). All relevant results are output in 
+mg/dL.}
 }
 \value{
 A data frame containing calculated CGM variables, with each column

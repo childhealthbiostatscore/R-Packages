@@ -35,6 +35,10 @@
 #' rather than the ID contained in the data.
 #' @param format Whether observations are in rows or columns.
 #' @param printname Whether or not to print each file name (for troubleshooting).
+#' @param unit Default unit is mg/dL. Any other value will multiply the 
+#' "sensorglucose" column by 18 (i.e. the package assumes that unit != "mg/dL"
+#' implies that the units are mmol/L). All relevant results are output in 
+#' mg/dL.
 #' @usage cgmvariables(inputdirectory,
 #' outputdirectory = tempdir(),
 #' outputname = "REDCap Upload",
@@ -47,7 +51,8 @@
 #' dayend = 22,
 #' id_filename = F,
 #' format = "rows",
-#' printname = F)
+#' printname = F,
+#' unit = "mg/dL")
 #' @examples cgmvariables(system.file("extdata","Cleaned",package = "cgmanalysis"))
 #' @return A data frame containing calculated CGM variables, with each column
 #' representing one CGM file.
@@ -65,7 +70,8 @@ cgmvariables <- function(inputdirectory,
                          dayend = 22,
                          id_filename = F,
                          format = "rows",
-                         printname = F) {
+                         printname = F,
+                         unit = "mg/dL") {
 
 # Read in data, create results dataframe. The dataframe has one column for each 
 # file in the input directory, and is desgined to be uploaded to REDCap. 
@@ -99,7 +105,11 @@ cgmvariables <- function(inputdirectory,
     table$timestamp <- parsedate::parse_date(table$timestamp,approx=F)
     table$sensorglucose[table$sensorglucose=="Low"] <- 40
     table$sensorglucose[table$sensorglucose=="High"] <- 400
-    table$sensorglucose <- suppressWarnings(base::as.numeric(table$sensorglucose))
+    if(unit != "mg/dL"){
+      table$sensorglucose <- suppressWarnings(base::as.numeric(table$sensorglucose)*18)
+    } else {
+      table$sensorglucose <- suppressWarnings(base::as.numeric(table$sensorglucose))
+    }
     interval <- pracma::Mode(base::diff(base::as.numeric(table$timestamp)))
     interval <- base::abs(interval)
     cgmupload["date_cgm_placement", f] <- 

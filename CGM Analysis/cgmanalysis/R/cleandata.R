@@ -24,13 +24,17 @@
 #' rather than the ID contained in the data.
 #' @param verbose If true, each file name will print as the program runs for 
 #' troubleshooting purposes.
+#' @param unit Default unit is mg/dL. Any other value will multiply the 
+#' "sensorglucose" column by 18 (i.e. the package assumes that unit != "mg/dL"
+#' implies that the units are mmol/L).
 #' @usage cleandata(inputdirectory,
 #' outputdirectory = tempdir(),
 #' removegaps = TRUE,
 #' gapfill = TRUE,
 #' maximumgap = 20,
 #' id_filename = F,
-#' verbose = F)
+#' verbose = F,
+#' unit = "mg/dL")
 #' @examples \dontrun{cleandata(system.file("extdata", "De-identified",
 #' package = "cgmanalysis"))}
 #' @export
@@ -41,7 +45,8 @@ cleandata <- function(inputdirectory,
                       gapfill = TRUE,
                       maximumgap = 20,
                       id_filename = F,
-                      verbose = F) {
+                      verbose = F,
+                      unit = "mg/dL") {
   
   # Set system locale to read all characters. Read in file list. Creat output 
   # directory.
@@ -67,6 +72,12 @@ cleandata <- function(inputdirectory,
                                stringsAsFactors = FALSE,
                                header = TRUE,
                                na.strings = "")
+      if(base::ncol(table)<=2){
+        table <- utils::read.csv(files[f],sep = ";",
+                                 stringsAsFactors = FALSE,
+                                 header = TRUE,
+                                 na.strings = "")
+      }
     } else if (ext == "xls" | ext == "xlsx" | ext == "xlsm") {
       table <- suppressMessages(readxl::read_excel(files[f],col_types = "text"))
       table <- as.data.frame(table)
@@ -133,7 +144,8 @@ cleandata <- function(inputdirectory,
       table <- table[-c(1:(base::which(table[,3] == "Sensor")+1)),]
       table$timestamp <- base::paste(table$Date,table$Time)
       table$timestamp <- base::gsub('.{3}$',"",table$timestamp)
-      table <- table[,c('timestamp','Sensor Glucose (mg/dL)')]
+      table <- table[,base::grep("timestamp|Sensor Glucose",colnames(table))]
+      table = table[,sort(colnames(table),decreasing = T)]
       base::colnames(table) <- c('timestamp','sensorglucose')
     } else if (cgmtype == "dexcom") {
       if (id_filename == F) {
@@ -220,8 +232,12 @@ cleandata <- function(inputdirectory,
   table$timestamp <- parsedate::parse_date(table$timestamp,approx=F)
   
   table$sensorglucose <- 
-    base::suppressWarnings(base::as.numeric(table$sensorglucose))
+    base::suppressWarnings(base::as.numeric(base::sub(",",".",table$sensorglucose)))
   table <- table[base::order(table$timestamp),]
+  
+  if(unit != "mg/dL"){
+    table$sensorglucose = table$sensorglucose*18
+  }
   
   recordstart <- 
     base::strftime(table$timestamp[min(which(!is.na(table$sensorglucose)))],
