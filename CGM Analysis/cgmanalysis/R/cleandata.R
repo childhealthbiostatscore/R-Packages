@@ -123,7 +123,7 @@ cleandata <- function(inputdirectory,
       cgmtype = "asc"
     } else if (base::ncol(table) == 6) {
       cgmtype <- "tslimg4"
-    } else if (base::ncol(table) == 41) {
+    } else if (base::ncol(table) %in% 39:41) {
       cgmtype <- "tandem"
     } else {
       stop(base::paste("File '",files[f],"' is formatted incorrectly and the data cannot be read.",sep = ""))
@@ -217,7 +217,7 @@ cleandata <- function(inputdirectory,
     } else {id <- sub(ext,"",basename(files[f]))}
     colnames(table) <- table[6,]
     table <- table[-c(1:6),]
-    table <- table[1:(which(table[,4] == "IOB")[1]-2),]
+    table <- table[1:(max(which(table[,3]=="EGV"))),]
     table <- table[,4:5]
     colnames(table) <- c('timestamp','sensorglucose')
     table$timestamp <- sub("T"," ",table$timestamp)
