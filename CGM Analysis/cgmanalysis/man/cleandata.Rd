@@ -14,44 +14,47 @@ verbose = F,
 unit = "mg/dL")
 }
 \arguments{
-\item{inputdirectory}{The directory containing CSV files for cleaning prior 
+\item{inputdirectory}{The directory containing CSV files for cleaning prior
 to analysis.}
 
 \item{outputdirectory}{The directory where cleaned CSV files will be written.}
 
-\item{removegaps}{Determines whether the data are cleaned or not. If set to 
-TRUE, any gaps in the data will be removed along with the 24 hours of data 
-containing the gap(s). The tail end of the data will also be trimmed to 
+\item{removegaps}{Determines whether the data are cleaned or not. If set to
+TRUE, any gaps in the data will be removed along with the 24 hours of data
+containing the gap(s). The tail end of the data will also be trimmed to
 ensure the timeseries is in discrete 24 hour chunks.}
 
-\item{gapfill}{If set to TRUE (and if removegaps = TRUE), gaps smaller than 
+\item{gapfill}{If set to TRUE (and if removegaps = TRUE), gaps smaller than
 or equal to maximumgap will be interpolated rather than removed.}
 
-\item{maximumgap}{Allows the user to determine the longest data gap (in 
+\item{maximumgap}{Allows the user to determine the longest data gap (in
 minutes) that will be interpolated.}
 
 \item{id_filename}{If true, the file name will be used for subject ID
 rather than the ID contained in the data.}
 
-\item{verbose}{If true, each file name will print as the program runs for 
+\item{verbose}{If true, each file name will print as the program runs for
 troubleshooting purposes.}
 
-\item{unit}{Default unit is mg/dL. Any other value will multiply the 
+\item{unit}{Default unit is mg/dL. Any other value will multiply the
 "sensorglucose" column by 18 (i.e. the package assumes that unit != "mg/dL"
 implies that the units are mmol/L).}
 }
 \description{
-This function returns cleaned CGM files for analysis. Files must not be 
-edited, and should be saved in the original format. If any files need to be 
-edited manually, please save them in the format specified by the 
-cgmvariables() function. If this function is unable to read your unedited 
+This function returns cleaned CGM files for analysis. Files must not be
+edited, and should be saved in the original format. If any files need to be
+edited manually, please save them in the format specified by the
+cgmvariables() function. If this function is unable to read your unedited
 CGM data, it may help to save your data in the format above.
 }
 \details{
-Because Diasend data is exported in an Excel document containing multiple 
+Because Diasend data is exported in an Excel document containing multiple
 tabs, the CGM data must be in the first tab in order to be read effectively.
 }
 \examples{
-\dontrun{cleandata(system.file("extdata", "De-identified",
-package = "cgmanalysis"))}
+\dontrun{
+cleandata(system.file("extdata", "De-identified",
+  package = "cgmanalysis"
+))
+}
 }
