@@ -156,8 +156,8 @@ cleandata <- function(inputdirectory,
       } else {
         id <- sub(ext, "", basename(files[f]))
       }
-      base::colnames(table) <- table[base::which(table[, 3] == "Sensor") + 1, ]
-      table <- table[-c(1:(base::which(table[, 3] == "Sensor") + 1)), ]
+      base::colnames(table) <- table[base::which(table[, 3] == "Sensor")[1] + 1, ]
+      table <- table[-c(1:(base::which(table[, 3] == "Sensor")[1] + 1)), ]
       table$timestamp <- base::paste(table$Date, table$Time)
       table$timestamp <- base::gsub(".{3}$", "", table$timestamp)
       table <- table[, base::grep("timestamp|Sensor Glucose", colnames(table))]
