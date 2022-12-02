@@ -61,8 +61,8 @@ cleandata <- function(inputdirectory,
       print(basename(files[f]))
     }
     ext <- tools::file_ext(files[f])
-    enc <- base::as.character(readr::guess_encoding(files[f])[1, 1])
     if (ext == "txt") {
+      enc <- base::as.character(readr::guess_encoding(files[f])[1, 1])
       table <- utils::read.table(files[f],
         sep = "\t",
         skipNul = TRUE,
