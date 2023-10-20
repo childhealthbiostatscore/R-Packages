@@ -6,3 +6,4 @@ CGM Analysis/cgmanalysis/inst/extdata/De-identified/.DS_Store
 CGM Analysis/.Rhistory
 
 CGM Analysis/shiny/cgmanalysis/rsconnect/shinyapps.io/childhealthbiostatscore/cgmanalysis.dcf
+*.gz
