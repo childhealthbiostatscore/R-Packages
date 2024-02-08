@@ -371,6 +371,17 @@ cgmvariables <- function(inputdirectory,
              (base::length(table$sensorglucose) * (interval/60))) * 100
       }
     }
+    # Rebounds
+    # Rebound high is a series of 1 or more values >180mg/dL preceded by any 
+    # series of 1 or more values <70mg/dL. The first hyperglycemic value must be 
+    # within 2 hours of the last value in hypoglycemic series. 
+    # Find beginnings and ends of the series
+    hypo_series_ends = table$timestamp[which(diff(table$sensorglucose < 70)==-1)+1]
+    hyper_series_starts =  table$timestamp[which(diff(table$sensorglucose > 180)==1)+1]
+    # Check how many hyper series starts are within 2 hours 
+    rhigh = sapply(hyper_series_starts,function(t){
+      any(hypo_series_ends >= t-lubridate::hours(2) & hypo_series_ends < t)
+    })
 # Find daytime AUC.
     if ("wake" %in% colnames(table)) {
       daytime_indexes <- 
