@@ -399,6 +399,27 @@ cgmvariables <- function(inputdirectory,
     rhigh <- sapply(hyper_series_starts, function(t) {
       any(hypo_series_ends >= t - lubridate::hours(2) & hypo_series_ends < t)
     })
+    # For each hyper series start, calculate series metrics
+    rhigh_metrics <- lapply(hyper_series_starts[rhigh], function(t) {
+      # Time since last hypo value
+      onset_mins <- as.numeric(difftime(t,
+        table$timestamp[tail(which(table$sensorglucose < 70 & table$timestamp < t), 1)],
+        units = "mins"
+      ))
+      start <- which(table$timestamp == t)
+      end <- which(table$sensorglucose <= 180 & table$timestamp > t)[1] - 1
+      d <- table[start:end, ]
+      d$mins <- as.numeric(difftime(d$timestamp, d$timestamp[1], units = "mins"))+(interval/60)
+      auc <- MESS::auc(d$mins, d$sensorglucose)
+      dur <- tail(d$mins, 1)
+      if(nrow(d) == 1){
+        dur = interval/60
+        auc = (interval/60)*d$sensorglucose
+      }
+      # Return
+      return(c(rhigh_onset = onset_mins, rhigh_duration = dur, rhigh_auc = auc))
+    })
+    rhigh_metrics <- do.call(rbind, rhigh_metrics)
     # Find daytime AUC.
     if ("wake" %in% colnames(table)) {
       daytime_indexes <-
