@@ -396,9 +396,15 @@ cgmvariables <- function(inputdirectory,
     hypo_series_ends <- table$timestamp[which(diff(table$sensorglucose < 70) == -1) + 1]
     hyper_series_starts <- table$timestamp[which(diff(table$sensorglucose > 180) == 1) + 1]
     # Check how many hyper series starts are within 2 hours
-    rhigh <- sapply(hyper_series_starts, function(t) {
-      any(hypo_series_ends >= t - lubridate::hours(2) & hypo_series_ends < t)
+    rhigh <- sapply(hypo_series_ends, function(t) {
+      w = which(hyper_series_starts <= t + lubridate::hours(2) & hyper_series_starts > t)
+      if(length(w)>0){
+        return(w[1])
+      } else {
+        NA
+      }
     })
+    rhigh = unique(rhigh[!is.na(rhigh)])
     # For each hyper series start, calculate series metrics
     rhigh_metrics <- lapply(hyper_series_starts[rhigh], function(t) {
       # Time since last hypo value
@@ -459,9 +465,15 @@ cgmvariables <- function(inputdirectory,
     hyper_series_ends <- table$timestamp[which(diff(table$sensorglucose > 180) == -1) + 1]
     hypo_series_starts <- table$timestamp[which(diff(table$sensorglucose < 70) == 1) + 1]
     # Check how many hyper series starts are within 2 hours
-    rlow <- sapply(hypo_series_starts, function(t) {
-      any(hyper_series_ends >= t - lubridate::hours(2) & hyper_series_ends < t)
+    rlow <- sapply(hyper_series_ends, function(t) {
+      w = which(hypo_series_starts <= t + lubridate::hours(2) & hypo_series_starts>t)
+      if(length(w)>0){
+        return(w[1])
+      } else {
+        NA
+      }
     })
+    rlow = unique(rlow[!is.na(rlow)])
     # For each hyper series start, calculate series metrics
     rlow_metrics <- lapply(hypo_series_starts[rlow], function(t) {
       # Time since last hypo value
@@ -516,10 +528,10 @@ cgmvariables <- function(inputdirectory,
     slow_metrics$start_time <- as.POSIXct(slow_metrics$start_time, tz = "UTC")
     slow_metrics$end_time <- as.POSIXct(slow_metrics$end_time, tz = "UTC")
     # Write for testing
-    write.csv(rhigh_metrics,file = "/Users/timvigers/Desktop/testing/rhigh_metrics.csv",row.names = F,na = "")
-    write.csv(shigh_metrics,file = "/Users/timvigers/Desktop/testing/shigh_metrics.csv",row.names = F,na = "")
-    write.csv(rlow_metrics,file = "/Users/timvigers/Desktop/testing/rlow_metrics.csv",row.names = F,na = "")
-    write.csv(slow_metrics,file = "/Users/timvigers/Desktop/testing/slow_metrics.csv",row.names = F,na = "")
+    write.csv(rhigh_metrics,file = "/Users/timvigers/Desktop/CGM/rhigh_metrics.csv",row.names = F,na = "")
+    write.csv(shigh_metrics,file = "/Users/timvigers/Desktop/CGM/shigh_metrics.csv",row.names = F,na = "")
+    write.csv(rlow_metrics,file = "/Users/timvigers/Desktop/CGM/rlow_metrics.csv",row.names = F,na = "")
+    write.csv(slow_metrics,file = "/Users/timvigers/Desktop/CGM/slow_metrics.csv",row.names = F,na = "")
 
 
 
