@@ -393,27 +393,27 @@ cgmvariables <- function(inputdirectory,
     # series of 1 or more values <70mg/dL. The first hyperglycemic value must be
     # within 2 hours of the last value in hypoglycemic series.
     # Find beginnings and ends of the series
-    hypo_series_ends <- table$timestamp[which(diff(table$sensorglucose < 70) == -1) + 1]
-    hyper_series_starts <- table$timestamp[which(diff(table$sensorglucose > 180) == 1) + 1]
-    # Check how many hyper series starts are within 2 hours
+    hypo_series_ends <- table$timestamp[which(diff(table$sensorglucose < 70) == -1)] + lubridate::minutes(5)
+    hyper_series_starts <- table$timestamp[which(diff(table$sensorglucose > 180) == 1)]
+    # Check how many hyper series starts are within 2 hours of a hypo series end
     rhigh <- sapply(hypo_series_ends, function(t) {
-      w = which(hyper_series_starts <= t + lubridate::hours(2) & hyper_series_starts > t)
-      if(length(w)>0){
+      w <- which(hyper_series_starts < t + lubridate::hours(2) & hyper_series_starts >= t)
+      if (length(w) > 0) {
         return(w[1])
       } else {
         NA
       }
     })
-    rhigh = unique(rhigh[!is.na(rhigh)])
+    rhigh <- unique(rhigh[!is.na(rhigh)])
     # For each hyper series start, calculate series metrics
     rhigh_metrics <- lapply(hyper_series_starts[rhigh], function(t) {
       # Time since last hypo value
       onset_mins <- as.numeric(difftime(t,
-        table$timestamp[tail(which(table$sensorglucose < 70 & table$timestamp < t), 1)],
+        table$timestamp[tail(which(table$sensorglucose < 70 & table$timestamp < t), 1)]+lubridate::minutes(5),
         units = "mins"
       ))
       start <- which(table$timestamp == t)
-      end <- which(table$sensorglucose <= 180 & table$timestamp > t)[1] - 1
+      end <- which(table$sensorglucose <= 180 & table$timestamp > t)[1]
       d <- table[start:end, ]
       d$mins <- as.numeric(difftime(d$timestamp, d$timestamp[1], units = "mins")) + (interval / 60)
       auc <- MESS::auc(d$mins, d$sensorglucose)
@@ -424,7 +424,7 @@ cgmvariables <- function(inputdirectory,
       }
       # Return
       return(c(
-        start_time = t, end_time = table$timestamp[end],
+        start_time = t, end_time = table$timestamp[end]+lubridate::minutes(5),
         rhigh_onset = onset_mins, rhigh_duration = dur, rhigh_auc = auc
       ))
     })
@@ -433,14 +433,14 @@ cgmvariables <- function(inputdirectory,
     rhigh_metrics$end_time <- as.POSIXct(rhigh_metrics$end_time, tz = "UTC")
     # SHigh is defined as any series of one or more SGVs > 180 mg/dl for 2
     # hours or more.
-    hyper_series_ends <- table$timestamp[which(diff(table$sensorglucose > 180) == -1) + 1]
-    hyper_series_lengths = as.numeric(difftime(hyper_series_ends,hyper_series_starts,units = "mins"))
+    hyper_series_ends <- table$timestamp[which(diff(table$sensorglucose > 180) == -1)] + lubridate::minutes(5)
+    hyper_series_lengths <- as.numeric(difftime(hyper_series_ends, hyper_series_starts, units = "mins"))
     # Check how many series are at least 2 hours
     shigh <- hyper_series_lengths >= 120
     # For each hyper series start, calculate series metrics
     shigh_metrics <- lapply(hyper_series_starts[shigh], function(t) {
       start <- which(table$timestamp == t)
-      end <- which(table$sensorglucose <= 180 & table$timestamp > t)[1] - 1
+      end <- which(table$sensorglucose <= 180 & table$timestamp > t)[1]
       d <- table[start:end, ]
       d$mins <- as.numeric(difftime(d$timestamp, d$timestamp[1], units = "mins")) + (interval / 60)
       auc <- MESS::auc(d$mins, d$sensorglucose)
@@ -451,7 +451,7 @@ cgmvariables <- function(inputdirectory,
       }
       # Return
       return(c(
-        start_time = t, end_time = table$timestamp[end],
+        start_time = t, end_time = table$timestamp[end]+ lubridate::minutes(5),
         shigh_duration = dur, shigh_auc = auc
       ))
     })
@@ -462,27 +462,27 @@ cgmvariables <- function(inputdirectory,
     # series of 1 or more values >180mg/dL. The first hypoglycemic value must be
     # within 2 hours of the last value in hyperglycemic series.
     # Find beginnings and ends of the series
-    hyper_series_ends <- table$timestamp[which(diff(table$sensorglucose > 180) == -1) + 1]
-    hypo_series_starts <- table$timestamp[which(diff(table$sensorglucose < 70) == 1) + 1]
+    hyper_series_ends <- table$timestamp[which(diff(table$sensorglucose > 180) == -1)] + lubridate::minutes(5)
+    hypo_series_starts <- table$timestamp[which(diff(table$sensorglucose < 70) == 1)]
     # Check how many hyper series starts are within 2 hours
     rlow <- sapply(hyper_series_ends, function(t) {
-      w = which(hypo_series_starts <= t + lubridate::hours(2) & hypo_series_starts>t)
-      if(length(w)>0){
+      w <- which(hypo_series_starts <= t + lubridate::hours(2) & hypo_series_starts > t)
+      if (length(w) > 0) {
         return(w[1])
       } else {
         NA
       }
     })
-    rlow = unique(rlow[!is.na(rlow)])
+    rlow <- unique(rlow[!is.na(rlow)])
     # For each hyper series start, calculate series metrics
     rlow_metrics <- lapply(hypo_series_starts[rlow], function(t) {
       # Time since last hypo value
       onset_mins <- as.numeric(difftime(t,
-        table$timestamp[tail(which(table$sensorglucose > 180 & table$timestamp < t), 1)],
+        table$timestamp[tail(which(table$sensorglucose > 180 & table$timestamp < t), 1)]+lubridate::minutes(5) ,
         units = "mins"
       ))
       start <- which(table$timestamp == t)
-      end <- which(table$sensorglucose >= 70 & table$timestamp > t)[1] - 1
+      end <- which(table$sensorglucose >= 70 & table$timestamp > t)[1]
       d <- table[start:end, ]
       d$mins <- as.numeric(difftime(d$timestamp, d$timestamp[1], units = "mins")) + (interval / 60)
       auc <- MESS::auc(d$mins, d$sensorglucose)
@@ -493,7 +493,7 @@ cgmvariables <- function(inputdirectory,
       }
       # Return
       return(c(
-        start_time = t, end_time = table$timestamp[end],
+        start_time = t, end_time = table$timestamp[end]+ lubridate::minutes(5),
         rlow_onset = onset_mins, rlow_duration = dur, rlow_auc = auc
       ))
     })
@@ -502,14 +502,14 @@ cgmvariables <- function(inputdirectory,
     rlow_metrics$end_time <- as.POSIXct(rlow_metrics$end_time, tz = "UTC")
     # SLow is defined as any series of one or more SGVs <70 mg/dl
     # for 2 hours or more.
-    hypo_series_ends <- table$timestamp[which(diff(table$sensorglucose < 70) == -1) + 1]
-    hypo_series_lengths = as.numeric(difftime(hypo_series_ends,hypo_series_starts,units = "mins"))
+    hypo_series_ends <- table$timestamp[which(diff(table$sensorglucose < 70) == -1)] + lubridate::minutes(5)
+    hypo_series_lengths <- as.numeric(difftime(hypo_series_ends, hypo_series_starts, units = "mins"))
     # Check how many series are at least 2 hours
     slow <- hypo_series_lengths >= 120
     # For each hyper series start, calculate series metrics
     slow_metrics <- lapply(hypo_series_starts[slow], function(t) {
       start <- which(table$timestamp == t)
-      end <- which(table$sensorglucose >= 70 & table$timestamp > t)[1] - 1
+      end <- which(table$sensorglucose >= 70 & table$timestamp > t)[1]
       d <- table[start:end, ]
       d$mins <- as.numeric(difftime(d$timestamp, d$timestamp[1], units = "mins")) + (interval / 60)
       auc <- MESS::auc(d$mins, d$sensorglucose)
@@ -520,7 +520,7 @@ cgmvariables <- function(inputdirectory,
       }
       # Return
       return(c(
-        start_time = t, end_time = table$timestamp[end],
+        start_time = t, end_time = table$timestamp[end]+lubridate::minutes(5),
         slow_duration = dur, slow_auc = auc
       ))
     })
@@ -528,14 +528,10 @@ cgmvariables <- function(inputdirectory,
     slow_metrics$start_time <- as.POSIXct(slow_metrics$start_time, tz = "UTC")
     slow_metrics$end_time <- as.POSIXct(slow_metrics$end_time, tz = "UTC")
     # Write for testing
-    write.csv(rhigh_metrics,file = "/Users/timvigers/Desktop/CGM/rhigh_metrics.csv",row.names = F,na = "")
-    write.csv(shigh_metrics,file = "/Users/timvigers/Desktop/CGM/shigh_metrics.csv",row.names = F,na = "")
-    write.csv(rlow_metrics,file = "/Users/timvigers/Desktop/CGM/rlow_metrics.csv",row.names = F,na = "")
-    write.csv(slow_metrics,file = "/Users/timvigers/Desktop/CGM/slow_metrics.csv",row.names = F,na = "")
-
-
-
-
+    write.csv(rhigh_metrics, file = "/home/timvigers/Desktop/CGM/rhigh_metrics.csv", row.names = F, na = "")
+    write.csv(shigh_metrics, file = "/home/timvigers/Desktop/CGM/shigh_metrics.csv", row.names = F, na = "")
+    write.csv(rlow_metrics, file = "/home/timvigers/Desktop/CGM/rlow_metrics.csv", row.names = F, na = "")
+    write.csv(slow_metrics, file = "/home/timvigers/Desktop/CGM/slow_metrics.csv", row.names = F, na = "")
 
     # Find daytime AUC.
     if ("wake" %in% colnames(table)) {
