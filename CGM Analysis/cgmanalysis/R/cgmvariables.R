@@ -576,6 +576,11 @@ cgmvariables <- function(inputdirectory,
     cgmupload["min_spent_under_70_day", f] <- base::sum(BGinrange, na.rm = T) * (interval / 60)
     cgmupload["percent_time_under_70_day", f] <-
       (base::sum(BGinrange, na.rm = T) * (interval / 60)) / (base::length(daytime_sensor) * (interval / 60)) * 100
+    
+    BGinrange <- ifelse(daytime_sensor > 140, 1, 0)
+    cgmupload["min_spent_over_140_day", f] <- base::sum(BGinrange, na.rm = T) * (interval / 60)
+    cgmupload["percent_time_over_140_day", f] <-
+      (base::sum(BGinrange, na.rm = T) * (interval / 60)) / (base::length(daytime_sensor) * (interval / 60)) * 100
 
     BGinrange <- ifelse(daytime_sensor > 180, 1, 0)
     cgmupload["min_spent_over_180_day", f] <- base::sum(BGinrange, na.rm = T) * (interval / 60)
@@ -645,6 +650,11 @@ cgmvariables <- function(inputdirectory,
       BGinrange <- ifelse(nighttime_sensor < 70, 1, 0)
       cgmupload["min_spent_under_70_night", f] <- base::sum(BGinrange, na.rm = T) * (interval / 60)
       cgmupload["percent_time_under_70_night", f] <-
+        (base::sum(BGinrange, na.rm = T) * (interval / 60)) / (base::length(nighttime_sensor) * (interval / 60)) * 100
+      
+      BGinrange <- ifelse(nighttime_sensor > 140, 1, 0)
+      cgmupload["min_spent_over_140_night", f] <- base::sum(BGinrange, na.rm = T) * (interval / 60)
+      cgmupload["percent_time_over_140_night", f] <-
         (base::sum(BGinrange, na.rm = T) * (interval / 60)) / (base::length(nighttime_sensor) * (interval / 60)) * 100
 
       BGinrange <- ifelse(nighttime_sensor > 180, 1, 0)
