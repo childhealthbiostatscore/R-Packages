@@ -54,7 +54,6 @@ cleandata <- function(inputdirectory,
   # directory.
   files <- base::list.files(path = inputdirectory, full.names = TRUE, recursive = T)
   base::dir.create(outputdirectory, showWarnings = FALSE)
-
   # Read in data, check CGM type.
   for (f in 1:base::length(files)) {
     if (verbose == T) {
@@ -111,8 +110,9 @@ cleandata <- function(inputdirectory,
     } else if (ext == "ASC") {
       table <- utils::read.delim(files[f])
     }
-
-    if (base::ncol(table) == 3 & base::colnames(table)[3] == "X" | base::ncol(table) == 2) {
+    if (base::ncol(table) == 3 && table[1, 3] == "Serial Number") {
+      cgmtype <- "dexcomg6"
+    } else if (base::ncol(table) == 3 & base::colnames(table)[3] == "X" | base::ncol(table) == 2) {
       cgmtype <- "diasend"
     } else if (base::ncol(table) == 18 | base::ncol(table) == 19) {
       if (table[2, 1] == "Device") {
@@ -137,10 +137,12 @@ cleandata <- function(inputdirectory,
       cgmtype <- "tslimg4"
     } else if (base::ncol(table) %in% 39:41) {
       cgmtype <- "tandem"
+    } else if (table[7, 1] == "t:slim X2") {
+      cgmtype <- "tslimx2"
     } else {
       stop(base::paste("File '", files[f], "' is formatted incorrectly and the data cannot be read.", sep = ""))
     }
-    ext <- paste0(".", ext)
+    ext <- paste0("\\.", ext)
     # Format columns.
     if (cgmtype == "diasend") {
       if (id_filename == F) {
@@ -173,6 +175,15 @@ cleandata <- function(inputdirectory,
       table$timestamp <- table[, grep("timestamp", tolower(colnames(table)))]
       table <- table[, c("timestamp", "sensorglucose")]
       table$timestamp <- base::sub("T", " ", table$timestamp)
+    } else if (cgmtype == "dexcomg6") {
+      if (id_filename == F) {
+        id <- base::sub("Name\\.\\.", "", colnames(table)[1])
+      } else {
+        id <- base::sub(ext, "", basename(files[f]))
+      }
+      table <- table[-1, ]
+      table[, 3] <- NULL
+      colnames(table) <- c("timestamp", "sensorglucose")
     } else if (cgmtype == "libre") {
       if (id_filename == F) {
         id <- table[1, 1]
@@ -254,12 +265,21 @@ cleandata <- function(inputdirectory,
       table <- table[, 4:5]
       colnames(table) <- c("timestamp", "sensorglucose")
       table$timestamp <- sub("T", " ", table$timestamp)
+    } else if (cgmtype == "tslimx2") {
+      if (id_filename == F) {
+        id <- table[2, 2]
+      } else {
+        id <- sub(ext, "", basename(files[f]))
+      }
+      base::colnames(table) <- table[which(table[, 1] == "DeviceType")[1], ]
+      table <- table[-c(1:which(table[, 1] == "DeviceType")[1]), ]
+      table <- table[, c("EventDateTime", "Readings (mg/dL)")]
+      base::colnames(table) <- c("timestamp", "sensorglucose")
+      table$timestamp <- sub("T", " ", table$timestamp)
     }
-
     # Make sensor glucose numeric, sort table by timestamp, remove duplicate rows.
     # If necessary, remove rows with no data.
     table$timestamp <- parsedate::parse_date(table$timestamp, approx = F)
-
     table$sensorglucose <-
       base::suppressWarnings(base::as.numeric(base::sub(",", ".", table$sensorglucose)))
     table <- table[base::order(table$timestamp), ]
@@ -267,11 +287,9 @@ cleandata <- function(inputdirectory,
     if (NA %in% table$timestamp) {
       table <- table[-c(base::which(is.na(table$timestamp))), ]
     }
-
     if (unit != "mg/dL") {
       table$sensorglucose <- table$sensorglucose * 18
     }
-
     recordstart <-
       base::strftime(table$timestamp[min(which(!is.na(table$sensorglucose)))],
         format = "%m/%d/%Y %T"
@@ -280,10 +298,8 @@ cleandata <- function(inputdirectory,
       base::strftime(table$timestamp[length(table$timestamp)],
         format = "%m/%d/%Y %T"
       )
-
     # Set interval based on mode of timestamp diff.
     interval <- pracma::Mode(base::diff(base::as.numeric(table$timestamp)))
-
     # Clean data (optional).
     if (removegaps == TRUE) {
       # Remove first rows without sensor glucose data.

@@ -409,7 +409,7 @@ cgmvariables <- function(inputdirectory,
     rhigh_metrics <- lapply(hyper_series_starts[rhigh], function(t) {
       # Time since last hypo value
       onset_mins <- as.numeric(difftime(t,
-        table$timestamp[tail(which(table$sensorglucose < 70 & table$timestamp < t), 1)]+lubridate::minutes(5),
+        table$timestamp[utils::tail(which(table$sensorglucose < 70 & table$timestamp < t), 1)] + lubridate::minutes(5),
         units = "mins"
       ))
       start <- which(table$timestamp == t)
@@ -417,14 +417,14 @@ cgmvariables <- function(inputdirectory,
       d <- table[start:end, ]
       d$mins <- as.numeric(difftime(d$timestamp, d$timestamp[1], units = "mins")) + (interval / 60)
       auc <- MESS::auc(d$mins, d$sensorglucose)
-      dur <- tail(d$mins, 1)
+      dur <- utils::tail(d$mins, 1)
       if (nrow(d) == 1) {
         dur <- interval / 60
         auc <- (interval / 60) * d$sensorglucose
       }
       # Return
       return(c(
-        start_time = t, end_time = table$timestamp[end]+lubridate::minutes(5),
+        start_time = t, end_time = table$timestamp[end] + lubridate::minutes(5),
         rhigh_onset = onset_mins, rhigh_duration = dur, rhigh_auc = auc
       ))
     })
@@ -444,14 +444,14 @@ cgmvariables <- function(inputdirectory,
       d <- table[start:end, ]
       d$mins <- as.numeric(difftime(d$timestamp, d$timestamp[1], units = "mins")) + (interval / 60)
       auc <- MESS::auc(d$mins, d$sensorglucose)
-      dur <- tail(d$mins, 1)
+      dur <- utils::tail(d$mins, 1)
       if (nrow(d) == 1) {
         dur <- interval / 60
         auc <- (interval / 60) * d$sensorglucose
       }
       # Return
       return(c(
-        start_time = t, end_time = table$timestamp[end]+ lubridate::minutes(5),
+        start_time = t, end_time = table$timestamp[end] + lubridate::minutes(5),
         shigh_duration = dur, shigh_auc = auc
       ))
     })
@@ -478,7 +478,7 @@ cgmvariables <- function(inputdirectory,
     rlow_metrics <- lapply(hypo_series_starts[rlow], function(t) {
       # Time since last hypo value
       onset_mins <- as.numeric(difftime(t,
-        table$timestamp[tail(which(table$sensorglucose > 180 & table$timestamp < t), 1)]+lubridate::minutes(5) ,
+        table$timestamp[utils::tail(which(table$sensorglucose > 180 & table$timestamp < t), 1)] + lubridate::minutes(5),
         units = "mins"
       ))
       start <- which(table$timestamp == t)
@@ -486,14 +486,14 @@ cgmvariables <- function(inputdirectory,
       d <- table[start:end, ]
       d$mins <- as.numeric(difftime(d$timestamp, d$timestamp[1], units = "mins")) + (interval / 60)
       auc <- MESS::auc(d$mins, d$sensorglucose)
-      dur <- tail(d$mins, 1)
+      dur <- utils::tail(d$mins, 1)
       if (nrow(d) == 1) {
         dur <- interval / 60
         auc <- (interval / 60) * d$sensorglucose
       }
       # Return
       return(c(
-        start_time = t, end_time = table$timestamp[end]+ lubridate::minutes(5),
+        start_time = t, end_time = table$timestamp[end] + lubridate::minutes(5),
         rlow_onset = onset_mins, rlow_duration = dur, rlow_auc = auc
       ))
     })
@@ -513,26 +513,20 @@ cgmvariables <- function(inputdirectory,
       d <- table[start:end, ]
       d$mins <- as.numeric(difftime(d$timestamp, d$timestamp[1], units = "mins")) + (interval / 60)
       auc <- MESS::auc(d$mins, d$sensorglucose)
-      dur <- tail(d$mins, 1)
+      dur <- utils::tail(d$mins, 1)
       if (nrow(d) == 1) {
         dur <- interval / 60
         auc <- (interval / 60) * d$sensorglucose
       }
       # Return
       return(c(
-        start_time = t, end_time = table$timestamp[end]+lubridate::minutes(5),
+        start_time = t, end_time = table$timestamp[end] + lubridate::minutes(5),
         slow_duration = dur, slow_auc = auc
       ))
     })
     slow_metrics <- data.frame(do.call(rbind, slow_metrics))
     slow_metrics$start_time <- as.POSIXct(slow_metrics$start_time, tz = "UTC")
     slow_metrics$end_time <- as.POSIXct(slow_metrics$end_time, tz = "UTC")
-    # Write for testing
-    write.csv(rhigh_metrics, file = "/home/timvigers/Desktop/CGM/rhigh_metrics.csv", row.names = F, na = "")
-    write.csv(shigh_metrics, file = "/home/timvigers/Desktop/CGM/shigh_metrics.csv", row.names = F, na = "")
-    write.csv(rlow_metrics, file = "/home/timvigers/Desktop/CGM/rlow_metrics.csv", row.names = F, na = "")
-    write.csv(slow_metrics, file = "/home/timvigers/Desktop/CGM/slow_metrics.csv", row.names = F, na = "")
-
     # Find daytime AUC.
     if ("wake" %in% colnames(table)) {
       daytime_indexes <-
@@ -576,7 +570,7 @@ cgmvariables <- function(inputdirectory,
     cgmupload["min_spent_under_70_day", f] <- base::sum(BGinrange, na.rm = T) * (interval / 60)
     cgmupload["percent_time_under_70_day", f] <-
       (base::sum(BGinrange, na.rm = T) * (interval / 60)) / (base::length(daytime_sensor) * (interval / 60)) * 100
-    
+
     BGinrange <- ifelse(daytime_sensor > 140, 1, 0)
     cgmupload["min_spent_over_140_day", f] <- base::sum(BGinrange, na.rm = T) * (interval / 60)
     cgmupload["percent_time_over_140_day", f] <-
@@ -651,7 +645,7 @@ cgmvariables <- function(inputdirectory,
       cgmupload["min_spent_under_70_night", f] <- base::sum(BGinrange, na.rm = T) * (interval / 60)
       cgmupload["percent_time_under_70_night", f] <-
         (base::sum(BGinrange, na.rm = T) * (interval / 60)) / (base::length(nighttime_sensor) * (interval / 60)) * 100
-      
+
       BGinrange <- ifelse(nighttime_sensor > 140, 1, 0)
       cgmupload["min_spent_over_140_night", f] <- base::sum(BGinrange, na.rm = T) * (interval / 60)
       cgmupload["percent_time_over_140_night", f] <-

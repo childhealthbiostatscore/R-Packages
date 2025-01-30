@@ -26,42 +26,42 @@ analysis.}
 \item{outputdirectory}{The directory where you would like the results
 spreadsheet to be written.}
 
-\item{outputname}{The name of the file containing final CGM variables 
+\item{outputname}{The name of the file containing final CGM variables
 (without the file extension).}
 
-\item{customintervals}{A list of custom blood glucose intervals. Minutes and 
-percent time below the lower bound, in the specified range, and above the 
-upper bound are calculated for each interval in the list. Number of 
-excursions below the lower bound and above the upper bound are also 
+\item{customintervals}{A list of custom blood glucose intervals. Minutes and
+percent time below the lower bound, in the specified range, and above the
+upper bound are calculated for each interval in the list. Number of
+excursions below the lower bound and above the upper bound are also
 calculated for each interval.}
 
-\item{aboveexcursionlength}{The number of minutes blood sugar must be above 
+\item{aboveexcursionlength}{The number of minutes blood sugar must be above
 threshold to count an excursion.}
 
-\item{belowexcursionlength}{The number of minutes blood sugar must be below 
+\item{belowexcursionlength}{The number of minutes blood sugar must be below
 threshold to count an excursion.}
 
-\item{magedef}{How large an excursion needs to be in order to count in the 
+\item{magedef}{How large an excursion needs to be in order to count in the
 MAGE calculation (e.g. greater than 1 standard deviation).}
 
 \item{congan}{CONGA interval in hours.}
 
-\item{daystart}{The numeric hour at which daytime should start (e.g. to start 
+\item{daystart}{The numeric hour at which daytime should start (e.g. to start
 counting day time at 6:00am, set daystart = 6).}
 
-\item{dayend}{The numeric hour at which daytime should end (this parameter 
+\item{dayend}{The numeric hour at which daytime should end (this parameter
 uses military time, so to stop counting day time at 10:00pm, set dayend = 22).}
 
-\item{id_filename}{If true, the file name will be used for subject ID 
+\item{id_filename}{If true, the file name will be used for subject ID
 rather than the ID contained in the data.}
 
 \item{format}{Whether observations are in rows or columns.}
 
 \item{printname}{Whether or not to print each file name (for troubleshooting).}
 
-\item{unit}{Default unit is mg/dL. Any other value will multiply the 
+\item{unit}{Default unit is mg/dL. Any other value will multiply the
 "sensorglucose" column by 18 (i.e. the package assumes that unit != "mg/dL"
-implies that the units are mmol/L). All relevant results are output in 
+implies that the units are mmol/L). All relevant results are output in
 mg/dL.}
 }
 \value{
@@ -73,12 +73,12 @@ This function takes cleaned CGM data and returns clinically relevant measures
 (e.g. percent time spent over 140, MAGE, MODD, etc.).
 }
 \details{
-All files must be saved as a csv, and must have three columns, the first of 
-which contains the subject ID in the first cell and date of CGM placement in 
-the second (see example files). The names of the columns must be "subjectid" 
-"timestamp" and "sensorglucose" (without quotes) respectively. Files can be 
+All files must be saved as a csv, and must have three columns, the first of
+which contains the subject ID in the first cell and date of CGM placement in
+the second (see example files). The names of the columns must be "subjectid"
+"timestamp" and "sensorglucose" (without quotes) respectively. Files can be
 cleaned and formatted using this package's cleandata() function.
 }
 \examples{
-cgmvariables(system.file("extdata","Cleaned",package = "cgmanalysis"))
+cgmvariables(system.file("extdata", "Cleaned", package = "cgmanalysis"))
 }
