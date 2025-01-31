@@ -113,7 +113,6 @@ cgmvariables <- function(inputdirectory,
     interval <- base::abs(interval)
     cgmupload["date_cgm_placement", f] <-
       base::as.character(min(table$timestamp, na.rm = T))
-
     totaltime <-
       base::as.numeric(base::difftime(base::max(table$timestamp, na.rm = T),
         base::min(table$timestamp, na.rm = T),
@@ -434,6 +433,14 @@ cgmvariables <- function(inputdirectory,
     # SHigh is defined as any series of one or more SGVs > 180 mg/dl for 2
     # hours or more.
     hyper_series_ends <- table$timestamp[which(diff(table$sensorglucose > 180) == -1)] + lubridate::minutes(5)
+    # If they start out high, ignore the first stretch of highs
+    if (table$sensorglucose[1] > 180) {
+      hyper_series_ends <- hyper_series_ends[-1]
+    }
+    # If they end high, ignore the last stretch of highs
+    if (table$sensorglucose[nrow(table)] > 180) {
+      hyper_series_starts <- hyper_series_starts[-length(hyper_series_starts)]
+    }
     hyper_series_lengths <- as.numeric(difftime(hyper_series_ends, hyper_series_starts, units = "mins"))
     # Check how many series are at least 2 hours
     shigh <- hyper_series_lengths >= 120
@@ -503,6 +510,14 @@ cgmvariables <- function(inputdirectory,
     # SLow is defined as any series of one or more SGVs <70 mg/dl
     # for 2 hours or more.
     hypo_series_ends <- table$timestamp[which(diff(table$sensorglucose < 70) == -1)] + lubridate::minutes(5)
+    # If they start out low, ignore the first stretch of lows
+    if (table$sensorglucose[1] < 70) {
+      hypo_series_ends <- hypo_series_ends[-1]
+    }
+    # If they end low, ignore the last stretch of lows
+    if (table$sensorglucose[nrow(table)] < 70) {
+      hypo_series_starts <- hypo_series_starts[-length(hypo_series_starts)]
+    }
     hypo_series_lengths <- as.numeric(difftime(hypo_series_ends, hypo_series_starts, units = "mins"))
     # Check how many series are at least 2 hours
     slow <- hypo_series_lengths >= 120
