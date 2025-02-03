@@ -7,7 +7,7 @@
 cgmvariables(inputdirectory,
 outputdirectory = tempdir(),
 outputname = "REDCap Upload",
-customintervals = list(c(180,250),c(250,400)),
+customintervals = list(c(70, 140), c(180, 250), c(250, 400)),
 aboveexcursionlength = 35,
 belowexcursionlength = 10,
 magedef = "1sd",
@@ -17,7 +17,8 @@ dayend = 22,
 id_filename = F,
 format = "rows",
 printname = F,
-unit = "mg/dL")
+unit = "mg/dL"
+)
 }
 \arguments{
 \item{inputdirectory}{The directory containing cleaned CSV files for

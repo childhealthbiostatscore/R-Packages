@@ -42,7 +42,7 @@
 #' @usage cgmvariables(inputdirectory,
 #' outputdirectory = tempdir(),
 #' outputname = "REDCap Upload",
-#' customintervals = list(c(180,250),c(250,400)),
+#' customintervals = list(c(70, 140), c(180, 250), c(250, 400)),
 #' aboveexcursionlength = 35,
 #' belowexcursionlength = 10,
 #' magedef = "1sd",
@@ -52,7 +52,8 @@
 #' id_filename = F,
 #' format = "rows",
 #' printname = F,
-#' unit = "mg/dL")
+#' unit = "mg/dL"
+#' )
 #' @examples cgmvariables(system.file("extdata", "Cleaned", package = "cgmanalysis"))
 #' @return A data frame containing calculated CGM variables, with each column
 #' representing one CGM file.
@@ -61,7 +62,7 @@
 cgmvariables <- function(inputdirectory,
                          outputdirectory = tempdir(),
                          outputname = "REDCap Upload",
-                         customintervals = list(c(180, 250), c(250, 400)),
+                         customintervals = list(c(70, 140), c(180, 250), c(250, 400)),
                          aboveexcursionlength = 35,
                          belowexcursionlength = 10,
                          magedef = "1sd",
@@ -405,31 +406,39 @@ cgmvariables <- function(inputdirectory,
     })
     rhigh <- unique(rhigh[!is.na(rhigh)])
     # For each hyper series start, calculate series metrics
-    rhigh_metrics <- lapply(hyper_series_starts[rhigh], function(t) {
-      # Time since last hypo value
-      onset_mins <- as.numeric(difftime(t,
-        table$timestamp[utils::tail(which(table$sensorglucose < 70 & table$timestamp < t), 1)] + lubridate::minutes(5),
-        units = "mins"
-      ))
-      start <- which(table$timestamp == t)
-      end <- which(table$sensorglucose <= 180 & table$timestamp > t)[1]
-      d <- table[start:end, ]
-      d$mins <- as.numeric(difftime(d$timestamp, d$timestamp[1], units = "mins")) + (interval / 60)
-      auc <- MESS::auc(d$mins, d$sensorglucose)
-      dur <- utils::tail(d$mins, 1)
-      if (nrow(d) == 1) {
-        dur <- interval / 60
-        auc <- (interval / 60) * d$sensorglucose
-      }
-      # Return
-      return(c(
-        start_time = t, end_time = table$timestamp[end] + lubridate::minutes(5),
-        rhigh_onset = onset_mins, rhigh_duration = dur, rhigh_auc = auc
-      ))
-    })
-    rhigh_metrics <- data.frame(do.call(rbind, rhigh_metrics))
-    rhigh_metrics$start_time <- as.POSIXct(rhigh_metrics$start_time, tz = "UTC")
-    rhigh_metrics$end_time <- as.POSIXct(rhigh_metrics$end_time, tz = "UTC")
+    if (length(rhigh) > 0) {
+      rhigh_metrics <- lapply(hyper_series_starts[rhigh], function(t) {
+        # Time since last hypo value
+        onset_mins <- as.numeric(difftime(t,
+          table$timestamp[utils::tail(which(table$sensorglucose < 70 & table$timestamp < t), 1)] + lubridate::minutes(5),
+          units = "mins"
+        ))
+        start <- which(table$timestamp == t)[1]
+        end <- which(table$sensorglucose <= 180 & table$timestamp > t)[1]
+        if (is.na(end)) {
+          end <- nrow(table)
+        }
+        d <- table[start:end, ]
+        d$mins <- as.numeric(difftime(d$timestamp, d$timestamp[1], units = "mins")) + (interval / 60)
+        if (sum(duplicated(d$timestamp)) > 0) {
+          d <- d[!duplicated(d$timestamp), ]
+        }
+        auc <- MESS::auc(d$mins, d$sensorglucose)
+        dur <- utils::tail(d$mins, 1)
+        if (nrow(d) == 1) {
+          dur <- interval / 60
+          auc <- (interval / 60) * d$sensorglucose
+        }
+        # Return
+        return(c(
+          start_time = t, end_time = table$timestamp[end] + lubridate::minutes(5),
+          rhigh_onset = onset_mins, rhigh_duration = dur, rhigh_auc = auc
+        ))
+      })
+      rhigh_metrics <- data.frame(do.call(rbind, rhigh_metrics))
+      rhigh_metrics$start_time <- as.POSIXct(rhigh_metrics$start_time, tz = "UTC")
+      rhigh_metrics$end_time <- as.POSIXct(rhigh_metrics$end_time, tz = "UTC")
+    }
     # SHigh is defined as any series of one or more SGVs > 180 mg/dl for 2
     # hours or more.
     hyper_series_ends <- table$timestamp[which(diff(table$sensorglucose > 180) == -1)] + lubridate::minutes(5)
@@ -445,26 +454,34 @@ cgmvariables <- function(inputdirectory,
     # Check how many series are at least 2 hours
     shigh <- hyper_series_lengths >= 120
     # For each hyper series start, calculate series metrics
-    shigh_metrics <- lapply(hyper_series_starts[shigh], function(t) {
-      start <- which(table$timestamp == t)
-      end <- which(table$sensorglucose <= 180 & table$timestamp > t)[1]
-      d <- table[start:end, ]
-      d$mins <- as.numeric(difftime(d$timestamp, d$timestamp[1], units = "mins")) + (interval / 60)
-      auc <- MESS::auc(d$mins, d$sensorglucose)
-      dur <- utils::tail(d$mins, 1)
-      if (nrow(d) == 1) {
-        dur <- interval / 60
-        auc <- (interval / 60) * d$sensorglucose
-      }
-      # Return
-      return(c(
-        start_time = t, end_time = table$timestamp[end] + lubridate::minutes(5),
-        shigh_duration = dur, shigh_auc = auc
-      ))
-    })
-    shigh_metrics <- data.frame(do.call(rbind, shigh_metrics))
-    shigh_metrics$start_time <- as.POSIXct(shigh_metrics$start_time, tz = "UTC")
-    shigh_metrics$end_time <- as.POSIXct(shigh_metrics$end_time, tz = "UTC")
+    if (length(shigh) > 0) {
+      shigh_metrics <- lapply(hyper_series_starts[shigh], function(t) {
+        start <- which(table$timestamp == t)[1]
+        end <- which(table$sensorglucose <= 180 & table$timestamp > t)[1]
+        if (is.na(end)) {
+          end <- nrow(table)
+        }
+        d <- table[start:end, ]
+        d$mins <- as.numeric(difftime(d$timestamp, d$timestamp[1], units = "mins")) + (interval / 60)
+        if (sum(duplicated(d$timestamp)) > 0) {
+          d <- d[!duplicated(d$timestamp), ]
+        }
+        auc <- MESS::auc(d$mins, d$sensorglucose)
+        dur <- utils::tail(d$mins, 1)
+        if (nrow(d) == 1) {
+          dur <- interval / 60
+          auc <- (interval / 60) * d$sensorglucose
+        }
+        # Return
+        return(c(
+          start_time = t, end_time = table$timestamp[end] + lubridate::minutes(5),
+          shigh_duration = dur, shigh_auc = auc
+        ))
+      })
+      shigh_metrics <- data.frame(do.call(rbind, shigh_metrics))
+      shigh_metrics$start_time <- as.POSIXct(shigh_metrics$start_time, tz = "UTC")
+      shigh_metrics$end_time <- as.POSIXct(shigh_metrics$end_time, tz = "UTC")
+    }
     # Rebound low is a series of 1 or more values <70 mg/dL preceded by any
     # series of 1 or more values >180mg/dL. The first hypoglycemic value must be
     # within 2 hours of the last value in hyperglycemic series.
@@ -482,31 +499,39 @@ cgmvariables <- function(inputdirectory,
     })
     rlow <- unique(rlow[!is.na(rlow)])
     # For each hyper series start, calculate series metrics
-    rlow_metrics <- lapply(hypo_series_starts[rlow], function(t) {
-      # Time since last hypo value
-      onset_mins <- as.numeric(difftime(t,
-        table$timestamp[utils::tail(which(table$sensorglucose > 180 & table$timestamp < t), 1)] + lubridate::minutes(5),
-        units = "mins"
-      ))
-      start <- which(table$timestamp == t)
-      end <- which(table$sensorglucose >= 70 & table$timestamp > t)[1]
-      d <- table[start:end, ]
-      d$mins <- as.numeric(difftime(d$timestamp, d$timestamp[1], units = "mins")) + (interval / 60)
-      auc <- MESS::auc(d$mins, d$sensorglucose)
-      dur <- utils::tail(d$mins, 1)
-      if (nrow(d) == 1) {
-        dur <- interval / 60
-        auc <- (interval / 60) * d$sensorglucose
-      }
-      # Return
-      return(c(
-        start_time = t, end_time = table$timestamp[end] + lubridate::minutes(5),
-        rlow_onset = onset_mins, rlow_duration = dur, rlow_auc = auc
-      ))
-    })
-    rlow_metrics <- data.frame(do.call(rbind, rlow_metrics))
-    rlow_metrics$start_time <- as.POSIXct(rlow_metrics$start_time, tz = "UTC")
-    rlow_metrics$end_time <- as.POSIXct(rlow_metrics$end_time, tz = "UTC")
+    if (length(rlow) > 0) {
+      rlow_metrics <- lapply(hypo_series_starts[rlow], function(t) {
+        # Time since last hypo value
+        onset_mins <- as.numeric(difftime(t,
+          table$timestamp[utils::tail(which(table$sensorglucose > 180 & table$timestamp < t), 1)] + lubridate::minutes(5),
+          units = "mins"
+        ))
+        start <- which(table$timestamp == t)[1]
+        end <- which(table$sensorglucose >= 70 & table$timestamp > t)[1]
+        if (is.na(end)) {
+          end <- nrow(table)
+        }
+        d <- table[start:end, ]
+        d$mins <- as.numeric(difftime(d$timestamp, d$timestamp[1], units = "mins")) + (interval / 60)
+        if (sum(duplicated(d$timestamp)) > 0) {
+          d <- d[!duplicated(d$timestamp), ]
+        }
+        auc <- MESS::auc(d$mins, d$sensorglucose)
+        dur <- utils::tail(d$mins, 1)
+        if (nrow(d) == 1) {
+          dur <- interval / 60
+          auc <- (interval / 60) * d$sensorglucose
+        }
+        # Return
+        return(c(
+          start_time = t, end_time = table$timestamp[end] + lubridate::minutes(5),
+          rlow_onset = onset_mins, rlow_duration = dur, rlow_auc = auc
+        ))
+      })
+      rlow_metrics <- data.frame(do.call(rbind, rlow_metrics))
+      rlow_metrics$start_time <- as.POSIXct(rlow_metrics$start_time, tz = "UTC")
+      rlow_metrics$end_time <- as.POSIXct(rlow_metrics$end_time, tz = "UTC")
+    }
     # SLow is defined as any series of one or more SGVs <70 mg/dl
     # for 2 hours or more.
     hypo_series_ends <- table$timestamp[which(diff(table$sensorglucose < 70) == -1)] + lubridate::minutes(5)
@@ -522,26 +547,34 @@ cgmvariables <- function(inputdirectory,
     # Check how many series are at least 2 hours
     slow <- hypo_series_lengths >= 120
     # For each hyper series start, calculate series metrics
-    slow_metrics <- lapply(hypo_series_starts[slow], function(t) {
-      start <- which(table$timestamp == t)
-      end <- which(table$sensorglucose >= 70 & table$timestamp > t)[1]
-      d <- table[start:end, ]
-      d$mins <- as.numeric(difftime(d$timestamp, d$timestamp[1], units = "mins")) + (interval / 60)
-      auc <- MESS::auc(d$mins, d$sensorglucose)
-      dur <- utils::tail(d$mins, 1)
-      if (nrow(d) == 1) {
-        dur <- interval / 60
-        auc <- (interval / 60) * d$sensorglucose
-      }
-      # Return
-      return(c(
-        start_time = t, end_time = table$timestamp[end] + lubridate::minutes(5),
-        slow_duration = dur, slow_auc = auc
-      ))
-    })
-    slow_metrics <- data.frame(do.call(rbind, slow_metrics))
-    slow_metrics$start_time <- as.POSIXct(slow_metrics$start_time, tz = "UTC")
-    slow_metrics$end_time <- as.POSIXct(slow_metrics$end_time, tz = "UTC")
+    if (length(slow) > 0) {
+      slow_metrics <- lapply(hypo_series_starts[slow], function(t) {
+        start <- which(table$timestamp == t)[1]
+        end <- which(table$sensorglucose >= 70 & table$timestamp > t)[1]
+        if (is.na(end)) {
+          end <- nrow(table)
+        }
+        d <- table[start:end, ]
+        d$mins <- as.numeric(difftime(d$timestamp, d$timestamp[1], units = "mins")) + (interval / 60)
+        if (sum(duplicated(d$timestamp)) > 0) {
+          d <- d[!duplicated(d$timestamp), ]
+        }
+        auc <- MESS::auc(d$mins, d$sensorglucose)
+        dur <- utils::tail(d$mins, 1)
+        if (nrow(d) == 1) {
+          dur <- interval / 60
+          auc <- (interval / 60) * d$sensorglucose
+        }
+        # Return
+        return(c(
+          start_time = t, end_time = table$timestamp[end] + lubridate::minutes(5),
+          slow_duration = dur, slow_auc = auc
+        ))
+      })
+      slow_metrics <- data.frame(do.call(rbind, slow_metrics))
+      slow_metrics$start_time <- as.POSIXct(slow_metrics$start_time, tz = "UTC")
+      slow_metrics$end_time <- as.POSIXct(slow_metrics$end_time, tz = "UTC")
+    }
     # Find daytime AUC.
     if ("wake" %in% colnames(table)) {
       daytime_indexes <-
@@ -557,7 +590,6 @@ cgmvariables <- function(inputdirectory,
         from = 0, length.out = base::length(daytime_sensor), by =
           (interval / 60)
       )
-
     # Remove NAs if they are present.
     xaxis[base::which(is.na(daytime_sensor))] <- NA
     xaxis <- xaxis[!is.na(xaxis)]
@@ -831,7 +863,6 @@ cgmvariables <- function(inputdirectory,
     cgmupload["lbgi", f] <- base::mean(stats::na.omit(rl))
     cgmupload["hbgi", f] <- base::mean(stats::na.omit(rh))
   }
-
   # Write file.
   cgmupload <-
     base::cbind("Variable / Field Name" = rownames(cgmupload), cgmupload)
