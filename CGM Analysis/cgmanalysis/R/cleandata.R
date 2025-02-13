@@ -110,9 +110,9 @@ cleandata <- function(inputdirectory,
     } else if (ext == "ASC") {
       table <- utils::read.delim(files[f])
     }
-    if (base::ncol(table) == 3 && table[1, 3] == "Serial Number") {
+    if (base::ncol(table) == 3 && !is.na(table[1, 3]) && table[1, 3] == "Serial Number") {
       cgmtype <- "dexcomg6"
-    } else if (base::ncol(table) == 3 & base::colnames(table)[3] == "X" | base::ncol(table) == 2) {
+    } else if (base::ncol(table) == 3 & base::colnames(table)[1] != "Name" | base::ncol(table) == 2) {
       cgmtype <- "diasend"
     } else if (base::ncol(table) == 18 | base::ncol(table) == 19) {
       if (table[2, 1] == "Device") {
@@ -139,6 +139,8 @@ cleandata <- function(inputdirectory,
       cgmtype <- "tandem"
     } else if (table[7, 1] == "t:slim X2") {
       cgmtype <- "tslimx2"
+    } else if (base::ncol(table) == 3 && table[3, 3] == "Serial Number") {
+      cgmtype <- "omnipod5"
     } else {
       stop(base::paste("File '", files[f], "' is formatted incorrectly and the data cannot be read.", sep = ""))
     }
@@ -274,6 +276,17 @@ cleandata <- function(inputdirectory,
       base::colnames(table) <- table[which(table[, 1] == "DeviceType")[1], ]
       table <- table[-c(1:which(table[, 1] == "DeviceType")[1]), ]
       table <- table[, c("EventDateTime", "Readings (mg/dL)")]
+      base::colnames(table) <- c("timestamp", "sensorglucose")
+      table$timestamp <- sub("T", " ", table$timestamp)
+    } else if (cgmtype == "omnipod5") {
+      if (id_filename == F) {
+        id <- sub("^X", "", colnames(table)[2])
+      } else {
+        id <- sub(ext, "", basename(files[f]))
+      }
+      base::colnames(table) <- table[which(table[, 1] == "Timestamp")[1], ]
+      table <- table[-c(1:which(table[, 1] == "Timestamp")[1]), ]
+      table <- table[, 1:2]
       base::colnames(table) <- c("timestamp", "sensorglucose")
       table$timestamp <- sub("T", " ", table$timestamp)
     }
