@@ -112,7 +112,7 @@ cleandata <- function(inputdirectory,
     }
     if (base::ncol(table) == 3 && !is.na(table[1, 3]) && table[1, 3] == "Serial Number") {
       cgmtype <- "dexcomg6"
-    } else if (base::ncol(table) == 3 & base::colnames(table)[1] != "Name" | base::ncol(table) == 2) {
+    } else if (base::ncol(table) == 3 &base::colnames(table)[1] != "subjectid"& (base::colnames(table)[1] != "Name" | base::ncol(table) == 2)) {
       cgmtype <- "diasend"
     } else if (base::ncol(table) == 18 | base::ncol(table) == 19) {
       if (table[2, 1] == "Device") {
