@@ -388,6 +388,7 @@ cgmvariables <- function(inputdirectory,
             (base::length(table$sensorglucose) * (interval / 60))) * 100
       }
     }
+
     # Rebounds
     # Rebound high is a series of 1 or more values >180mg/dL preceded by any
     # series of 1 or more values <70mg/dL. The first hyperglycemic value must be
@@ -722,20 +723,12 @@ cgmvariables <- function(inputdirectory,
     }
 
     # Total AUC.
-    sensorBG <- base::as.numeric(table$sensorglucose, length = 1)
-    xaxis <-
-      base::seq(
-        from = 0, length.out = base::length(sensorBG), by =
-          (interval / 60)
-      )
-
+    sensorBG <- base::as.numeric(table$sensorglucose)
+    xaxis_minute <- as.numeric(difftime(table$timestamp, table$timestamp[1], units = "mins"))
     # Remove NAs if they are present.
-    xaxis[base::which(is.na(sensorBG))] <- NA
-    xaxis <- xaxis[!is.na(xaxis)]
-    sensorBG <- sensorBG[!is.na(sensorBG)]
-    aucs <- pracma::cumtrapz(xaxis, sensorBG)
-    cgmupload["total_auc", f] <- aucs[base::length(sensorBG)]
-
+    aucs <- pracma::cumtrapz(xaxis_minute, sensorBG)
+    cgmupload["total_auc", f] <- aucs[base::length(aucs)]
+    cgmupload["hourly_auc", f] <- aucs[base::length(aucs)] / 60 / as.numeric(difftime(max(table$timestamp), min(table$timestamp), units = "hours"))
     cgmupload["average_auc_per_day", f] <-
       base::as.numeric(cgmupload["total_auc", f]) /
         base::as.numeric(cgmupload["num_days_good_data", f])
@@ -853,15 +846,27 @@ cgmvariables <- function(inputdirectory,
       base::mean(stats::na.omit(moddtable$mean_differences))
 
     # LBGI and HBGI (based on dc1386 appendix)
-    a <- 1.084
-    b <- 5.381
-    y <- 1.509
-    table$gluctransform <- y * ((base::log(table$sensorglucose)^a) - b)
-    table$rBG <- 10 * (table$gluctransform^2)
-    rl <- table$rBG[base::which(table$gluctransform < 0)]
-    rh <- table$rBG[base::which(table$gluctransform > 0)]
-    cgmupload["lbgi", f] <- base::mean(stats::na.omit(rl))
-    cgmupload["hbgi", f] <- base::mean(stats::na.omit(rh))
+    table$gluctransform <- (base::log(table$sensorglucose)^1.084) - 5.381
+    table$rBG <- 22.77 * (table$gluctransform^2)
+    table$rl <- ifelse(table$gluctransform <= 0, table$rBG, 0)
+    table$rh <- ifelse(table$gluctransform > 0, table$rBG, 0)
+    cgmupload["lbgi", f] <- base::mean(stats::na.omit(table$rl))
+    cgmupload["hbgi", f] <- base::mean(stats::na.omit(table$rh))
+    # ADRR (See doi:10.2337/dc06-1085)
+    table$Date <- as.Date(table$timestamp)
+    dates <- unique(table$Date)
+    adrr <- sapply(dates, function(d) {
+      return(
+        max(table$rl[table$Date == d], na.rm = T) +
+          max(table$rh[table$Date == d], na.rm = T)
+      )
+    })
+    cgmupload["adrr", f] <- base::mean(adrr, na.rm = T)
+    # MAG (see doi:10.1097/CCM.0b013e3181cc4be9)
+    delta_bg <- sum(abs(diff(table$sensorglucose)), na.rm = T)
+    delta_t <- (interval * sum(!is.na(table$sensorglucose))) / 3600
+    mag <- delta_bg / delta_t
+    cgmupload["mag", f] <- mag
   }
   # Write file.
   cgmupload <-
