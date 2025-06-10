@@ -3,3 +3,4 @@
 export(cgmreport)
 export(cgmvariables)
 export(cleandata)
+importFrom(rlang,.data)
