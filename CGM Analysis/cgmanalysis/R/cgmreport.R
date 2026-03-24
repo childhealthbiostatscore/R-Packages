@@ -19,10 +19,12 @@
 #' @importFrom rlang .data
 #' @export
 
-cgmreport <- function(inputdirectory,
-                      outputdirectory = tempdir(),
-                      tz = "UTC",
-                      yaxis = c(0, 400)) {
+cgmreport <- function(
+  inputdirectory,
+  outputdirectory = tempdir(),
+  tz = "UTC",
+  yaxis = c(0, 400)
+) {
   # Get file list.
   files <- base::list.files(path = inputdirectory, full.names = TRUE)
 
@@ -34,7 +36,12 @@ cgmreport <- function(inputdirectory,
   # Iterate through directory, combine all data.
   for (f in 1:length(files)) {
     cgmdata <-
-      utils::read.csv(files[f], stringsAsFactors = FALSE, header = TRUE, skipNul = TRUE)
+      utils::read.csv(
+        files[f],
+        stringsAsFactors = FALSE,
+        header = TRUE,
+        skipNul = TRUE
+      )
     id <- cgmdata$subjectid[1]
     cgmdata$subjectid <- id
     aggregateAGPdata <- rbind(cgmdata, aggregateAGPdata)
@@ -42,111 +49,213 @@ cgmreport <- function(inputdirectory,
   aggregateAGPdata$sensorglucose <- as.numeric(aggregateAGPdata$sensorglucose)
 
   # Remove missing data.
-  aggregateAGPdata <- aggregateAGPdata[stats::complete.cases(aggregateAGPdata), ]
+  aggregateAGPdata <- aggregateAGPdata[
+    stats::complete.cases(aggregateAGPdata),
+  ]
 
   # Remove dates, so aggregate AGP data can be sorted by time of day.
   aggregateAGPdata$timestamp <-
-    as.POSIXct(parsedate::parse_date(aggregateAGPdata$timestamp, default_tz = tz))
-  aggregateAGPdata$hour <- lubridate::round_date(aggregateAGPdata$timestamp, "hour")
+    as.POSIXct(parsedate::parse_date(
+      aggregateAGPdata$timestamp,
+      default_tz = tz
+    ))
+  aggregateAGPdata$hour <- lubridate::round_date(
+    aggregateAGPdata$timestamp,
+    "hour"
+  )
   aggregateAGPdata$time <-
-    as.POSIXct(strftime(aggregateAGPdata$timestamp, format = "%H:%M"),
+    as.POSIXct(
+      strftime(aggregateAGPdata$timestamp, format = "%H:%M"),
       format = "%H:%M"
     )
   aggregateAGPdata$hourmin <-
     lubridate::round_date(aggregateAGPdata$timestamp, "10 minutes")
   aggregateAGPdata$hourmin <-
-    as.POSIXct(strftime(aggregateAGPdata$hourmin, format = "%H:%M"),
+    as.POSIXct(
+      strftime(aggregateAGPdata$hourmin, format = "%H:%M"),
       format = "%H:%M"
     )
 
   # Find 25%ile, median, and 75%ile blood glucose for each hour, store in new table.
   quartiles <-
-    data.frame(matrix(nrow = length(unique(aggregateAGPdata$hourmin)), ncol = 6))
+    data.frame(matrix(
+      nrow = length(unique(aggregateAGPdata$hourmin)),
+      ncol = 6
+    ))
   colnames(quartiles) <-
     c(
-      "hourmin", "sensorglucose5perc", "sensorglucoseqone", "sensorglucosemedian",
-      "sensorglucoseqthree", "sensorglucose95perc"
+      "hourmin",
+      "sensorglucose5perc",
+      "sensorglucoseqone",
+      "sensorglucosemedian",
+      "sensorglucoseqthree",
+      "sensorglucose95perc"
     )
   quartiles$hourmin <- unique(aggregateAGPdata$hourmin)
   quartiles <- quartiles[order(quartiles$hourmin), ]
 
   for (i in 1:nrow(quartiles)) {
     quartiles$sensorglucose5perc[i] <-
-      stats::quantile(as.numeric(aggregateAGPdata$sensorglucose[which(aggregateAGPdata$hourmin == quartiles$hourmin[i])]), 0.05)
+      stats::quantile(
+        as.numeric(aggregateAGPdata$sensorglucose[which(
+          aggregateAGPdata$hourmin == quartiles$hourmin[i]
+        )]),
+        0.05
+      )
     quartiles$sensorglucoseqone[i] <-
-      as.numeric(summary(aggregateAGPdata$sensorglucose[which(aggregateAGPdata$hourmin == quartiles$hourmin[i])])[2])
+      as.numeric(summary(aggregateAGPdata$sensorglucose[which(
+        aggregateAGPdata$hourmin == quartiles$hourmin[i]
+      )])[2])
     quartiles$sensorglucosemedian[i] <-
-      as.numeric(summary(aggregateAGPdata$sensorglucose[which(aggregateAGPdata$hourmin == quartiles$hourmin[i])])[3])
+      as.numeric(summary(aggregateAGPdata$sensorglucose[which(
+        aggregateAGPdata$hourmin == quartiles$hourmin[i]
+      )])[3])
     quartiles$sensorglucoseqthree[i] <-
-      as.numeric(summary(aggregateAGPdata$sensorglucose[which(aggregateAGPdata$hourmin == quartiles$hourmin[i])])[5])
+      as.numeric(summary(aggregateAGPdata$sensorglucose[which(
+        aggregateAGPdata$hourmin == quartiles$hourmin[i]
+      )])[5])
     quartiles$sensorglucose95perc[i] <-
-      stats::quantile(as.numeric(aggregateAGPdata$sensorglucose[which(aggregateAGPdata$hourmin == quartiles$hourmin[i])]), 0.95)
+      stats::quantile(
+        as.numeric(aggregateAGPdata$sensorglucose[which(
+          aggregateAGPdata$hourmin == quartiles$hourmin[i]
+        )]),
+        0.95
+      )
   }
 
   quartiles$smooth5perc <-
-    as.numeric(stats::smooth(quartiles$sensorglucose5perc, kind = "3R", twiceit = TRUE))
+    as.numeric(stats::smooth(
+      quartiles$sensorglucose5perc,
+      kind = "3R",
+      twiceit = TRUE
+    ))
   quartiles$smoothqone <-
-    as.numeric(stats::smooth(quartiles$sensorglucoseqone, kind = "3R", twiceit = TRUE))
+    as.numeric(stats::smooth(
+      quartiles$sensorglucoseqone,
+      kind = "3R",
+      twiceit = TRUE
+    ))
   quartiles$smoothmed <-
-    as.numeric(stats::smooth(quartiles$sensorglucosemedian, kind = "3R", twiceit = TRUE))
+    as.numeric(stats::smooth(
+      quartiles$sensorglucosemedian,
+      kind = "3R",
+      twiceit = TRUE
+    ))
   quartiles$smoothqthree <-
-    as.numeric(stats::smooth(quartiles$sensorglucoseqthree, kind = "3R", twiceit = TRUE))
+    as.numeric(stats::smooth(
+      quartiles$sensorglucoseqthree,
+      kind = "3R",
+      twiceit = TRUE
+    ))
   quartiles$smooth95perc <-
-    as.numeric(stats::smooth(quartiles$sensorglucose95perc, kind = "3R", twiceit = TRUE))
+    as.numeric(stats::smooth(
+      quartiles$sensorglucose95perc,
+      kind = "3R",
+      twiceit = TRUE
+    ))
 
   # Plots
-  aggAGPtukey <- ggplot2::ggplot(quartiles, ggplot2::aes(x = .data[["hourmin"]])) +
-    ggplot2::geom_ribbon(ggplot2::aes(ymin = .data[["smoothqone"]], ymax = .data[["smoothqthree"]], fill = "Interquartile Range"), alpha = 0.5) +
-    ggplot2::geom_line(ggplot2::aes(y = .data[["smoothmed"]], color = "Median")) +
-    ggplot2::geom_line(ggplot2::aes(y = .data[["smooth95perc"]], linetype = "5th & 95th Percentile")) +
-    ggplot2::geom_line(ggplot2::aes(y = .data[["smooth5perc"]]), linetype = "dashed") +
+  aggAGPtukey <- ggplot2::ggplot(
+    quartiles,
+    ggplot2::aes(x = .data[["hourmin"]])
+  ) +
+    ggplot2::geom_ribbon(
+      ggplot2::aes(
+        ymin = .data[["smoothqone"]],
+        ymax = .data[["smoothqthree"]],
+        fill = "Interquartile Range"
+      ),
+      alpha = 0.5
+    ) +
+    ggplot2::geom_line(ggplot2::aes(
+      y = .data[["smoothmed"]],
+      color = "Median"
+    )) +
+    ggplot2::geom_line(ggplot2::aes(
+      y = .data[["smooth95perc"]],
+      linetype = "5th & 95th Percentile"
+    )) +
+    ggplot2::geom_line(
+      ggplot2::aes(y = .data[["smooth5perc"]]),
+      linetype = "dashed"
+    ) +
     ggplot2::ggtitle("Aggregate Daily Overlay (Tukey Smoothing)") +
     ggplot2::ylab("Sensor BG (mg/dL)") +
     ggplot2::xlab("Time (hour)") +
     ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5)) +
-    ggplot2::scale_x_datetime(labels = function(x) format(x, format = "%H:%M")) +
+    ggplot2::scale_x_datetime(labels = function(x) {
+      format(x, format = "%H:%M")
+    }) +
     ggplot2::scale_fill_manual("", values = "blue") +
     ggplot2::scale_color_manual("", values = "red") +
     ggplot2::scale_linetype_manual("", values = "dashed") +
     ggplot2::ylim(yaxis[1], yaxis[2])
 
   AGPloess <-
-    ggplot2::ggplot(aggregateAGPdata, ggplot2::aes(x = .data[["time"]], y = .data[["sensorglucose"]])) +
-    ggplot2::geom_smooth(ggplot2::aes(y = .data[["sensorglucose"]], color = .data[["subjectid"]]), se = FALSE) +
-    ggplot2::geom_point(ggplot2::aes(y = .data[["sensorglucose"]], color = .data[["subjectid"]]), shape = ".") +
+    ggplot2::ggplot(
+      aggregateAGPdata,
+      ggplot2::aes(x = .data[["time"]], y = .data[["sensorglucose"]])
+    ) +
+    ggplot2::geom_smooth(
+      ggplot2::aes(y = .data[["sensorglucose"]], color = .data[["subjectid"]]),
+      se = FALSE
+    ) +
+    ggplot2::geom_point(
+      ggplot2::aes(y = .data[["sensorglucose"]], color = .data[["subjectid"]]),
+      shape = "."
+    ) +
     ggplot2::ggtitle("Daily Overlay Per Subject (LOESS Smoothing)") +
     ggplot2::ylab("Sensor BG (mg/dL)") +
     ggplot2::xlab("Time (hour)") +
     ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5)) +
     ggplot2::labs(colour = "Subject ID") +
-    ggplot2::scale_x_datetime(labels = function(x) format(x, format = "%H:%M")) +
+    ggplot2::scale_x_datetime(labels = function(x) {
+      format(x, format = "%H:%M")
+    }) +
     ggplot2::ylim(yaxis[1], yaxis[2])
 
   aggAGPloess <-
-    ggplot2::ggplot(aggregateAGPdata, ggplot2::aes(x = .data[["time"]], y = .data[["sensorglucose"]])) +
-    ggplot2::geom_smooth(ggplot2::aes(y = .data[["sensorglucose"]]), se = FALSE) +
-    ggplot2::geom_point(ggplot2::aes(y = .data[["sensorglucose"]]), shape = ".") +
+    ggplot2::ggplot(
+      aggregateAGPdata,
+      ggplot2::aes(x = .data[["time"]], y = .data[["sensorglucose"]])
+    ) +
+    ggplot2::geom_smooth(
+      ggplot2::aes(y = .data[["sensorglucose"]]),
+      se = FALSE
+    ) +
+    ggplot2::geom_point(
+      ggplot2::aes(y = .data[["sensorglucose"]]),
+      shape = "."
+    ) +
     ggplot2::ggtitle("Aggregate Daily Overlay (LOESS Smoothing)") +
     ggplot2::ylab("Sensor BG (mg/dL)") +
     ggplot2::xlab("Time (hour)") +
     ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5)) +
-    ggplot2::scale_x_datetime(labels = function(x) format(x, format = "%H:%M")) +
+    ggplot2::scale_x_datetime(labels = function(x) {
+      format(x, format = "%H:%M")
+    }) +
     ggplot2::ylim(yaxis[1], yaxis[2])
 
-  grDevices::pdf(base::paste(outputdirectory, "/", "AGP_Tukey.pdf", sep = ""),
-    width = 11, height = 8.5
+  grDevices::pdf(
+    base::paste(outputdirectory, "/", "AGP_Tukey.pdf", sep = ""),
+    width = 11,
+    height = 8.5
   )
   graphics::plot(aggAGPtukey)
   grDevices::dev.off()
 
-  grDevices::pdf(base::paste(outputdirectory, "/", "AGP_Loess_Subject.pdf", sep = ""),
-    width = 11, height = 8.5
+  grDevices::pdf(
+    base::paste(outputdirectory, "/", "AGP_Loess_Subject.pdf", sep = ""),
+    width = 11,
+    height = 8.5
   )
   graphics::plot(AGPloess)
   grDevices::dev.off()
 
-  grDevices::pdf(base::paste(outputdirectory, "/", "Aggregate_AGP_Loess.pdf", sep = ""),
-    width = 11, height = 8.5
+  grDevices::pdf(
+    base::paste(outputdirectory, "/", "Aggregate_AGP_Loess.pdf", sep = ""),
+    width = 11,
+    height = 8.5
   )
   graphics::plot(aggAGPloess)
   grDevices::dev.off()

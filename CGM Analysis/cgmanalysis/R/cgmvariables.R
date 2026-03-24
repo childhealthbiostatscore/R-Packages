@@ -59,20 +59,22 @@
 #' representing one CGM file.
 #' @export
 
-cgmvariables <- function(inputdirectory,
-                         outputdirectory = tempdir(),
-                         outputname = "REDCap Upload",
-                         customintervals = list(c(70, 140), c(180, 250), c(250, 400)),
-                         aboveexcursionlength = 35,
-                         belowexcursionlength = 10,
-                         magedef = "1sd",
-                         congan = 1,
-                         daystart = 6,
-                         dayend = 22,
-                         id_filename = F,
-                         format = "rows",
-                         printname = F,
-                         unit = "mg/dL") {
+cgmvariables <- function(
+  inputdirectory,
+  outputdirectory = tempdir(),
+  outputname = "REDCap Upload",
+  customintervals = list(c(70, 140), c(180, 250), c(250, 400)),
+  aboveexcursionlength = 35,
+  belowexcursionlength = 10,
+  magedef = "1sd",
+  congan = 1,
+  daystart = 6,
+  dayend = 22,
+  id_filename = F,
+  format = "rows",
+  printname = F,
+  unit = "mg/dL"
+) {
   # Read in data, create results dataframe. The dataframe has one column for each
   # file in the input directory, and is desgined to be uploaded to REDCap.
   files <- base::list.files(path = inputdirectory, full.names = TRUE)
@@ -86,7 +88,11 @@ cgmvariables <- function(inputdirectory,
   # cleandata() output.
   for (f in 1:base::length(files)) {
     # Basic variables
-    table <- utils::read.csv(files[f], stringsAsFactors = FALSE, na.strings = c("NA", ""))
+    table <- utils::read.csv(
+      files[f],
+      stringsAsFactors = FALSE,
+      na.strings = c("NA", "")
+    )
     # Remove duplicates
     if (id_filename == F) {
       table$subjectid <- table$subjectid[1]
@@ -106,42 +112,78 @@ cgmvariables <- function(inputdirectory,
     table$sensorglucose[table$sensorglucose == "Low"] <- 40
     table$sensorglucose[table$sensorglucose == "High"] <- 400
     if (unit != "mg/dL") {
-      table$sensorglucose <- suppressWarnings(base::as.numeric(table$sensorglucose) * 18)
+      table$sensorglucose <- suppressWarnings(
+        base::as.numeric(table$sensorglucose) * 18
+      )
     } else {
-      table$sensorglucose <- suppressWarnings(base::as.numeric(table$sensorglucose))
+      table$sensorglucose <- suppressWarnings(base::as.numeric(
+        table$sensorglucose
+      ))
     }
     interval <- pracma::Mode(base::diff(base::as.numeric(table$timestamp)))
     interval <- base::abs(interval)
     cgmupload["date_cgm_placement", f] <-
       base::as.character(min(table$timestamp, na.rm = T))
     totaltime <-
-      base::as.numeric(base::difftime(base::max(table$timestamp, na.rm = T),
+      base::as.numeric(base::difftime(
+        base::max(table$timestamp, na.rm = T),
         base::min(table$timestamp, na.rm = T),
         units = "secs"
       ))
     cgmupload["percent_cgm_wear", f] <-
-      base::floor(((base::length(which(!is.na(table$sensorglucose))) / (totaltime / interval)) * 100))
-    cgmupload["num_days", f] <- base::length(base::unique(lubridate::date(table$timestamp[base::which(!is.na(table$sensorglucose))])))
+      base::floor(
+        ((base::length(which(!is.na(table$sensorglucose))) /
+          (totaltime / interval)) *
+          100)
+      )
+    cgmupload[
+      "num_days",
+      f
+    ] <- base::length(base::unique(lubridate::date(table$timestamp[base::which(
+      !is.na(table$sensorglucose)
+    )])))
 
     table <- table[!is.na(table$timestamp) & !is.na(table$sensorglucose), ]
 
     cgmupload["total_sensor_readings", f] <-
       base::as.numeric(base::length(base::which(!is.na(table$sensorglucose))))
     cgmupload["mean_sensor", f] <-
-      base::mean(table$sensorglucose[base::which(!is.na(table$sensorglucose))], na.rm = T)
+      base::mean(
+        table$sensorglucose[base::which(!is.na(table$sensorglucose))],
+        na.rm = T
+      )
     cgmupload["median_sensor", f] <-
-      stats::median(table$sensorglucose[base::which(!is.na(table$sensorglucose))], na.rm = T)
+      stats::median(
+        table$sensorglucose[base::which(!is.na(table$sensorglucose))],
+        na.rm = T
+      )
     cgmupload["percentile_25_sensor", f] <-
-      stats::quantile(table$sensorglucose[base::which(!is.na(table$sensorglucose))], na.rm = T)[2]
+      stats::quantile(
+        table$sensorglucose[base::which(!is.na(table$sensorglucose))],
+        na.rm = T
+      )[2]
     cgmupload["percentile_75_sensor", f] <-
-      stats::quantile(table$sensorglucose[base::which(!is.na(table$sensorglucose))], na.rm = T)[4]
+      stats::quantile(
+        table$sensorglucose[base::which(!is.na(table$sensorglucose))],
+        na.rm = T
+      )[4]
     cgmupload["estimated_a1c", f] <-
-      base::round((46.7 + (base::mean(table$sensorglucose[
-        base::which(!is.na(table$sensorglucose))
-      ]))) / 28.7, digits = 1)
-    cgmupload["gmi", f] <- base::round(3.31 + (0.02392 * base::mean(table$sensorglucose[
-      base::which(!is.na(table$sensorglucose))
-    ])), digits = 1)
+      base::round(
+        (46.7 +
+          (base::mean(table$sensorglucose[
+            base::which(!is.na(table$sensorglucose))
+          ]))) /
+          28.7,
+        digits = 1
+      )
+    cgmupload["gmi", f] <- base::round(
+      3.31 +
+        (0.02392 *
+          base::mean(table$sensorglucose[
+            base::which(!is.na(table$sensorglucose))
+          ])),
+      digits = 1
+    )
     cgmupload["q1_sensor", f] <-
       base::as.numeric(base::summary(table$sensorglucose[
         base::which(!is.na(table$sensorglucose))
@@ -157,8 +199,10 @@ cgmvariables <- function(inputdirectory,
     cgmupload["standard_deviation", f] <-
       stats::sd(table$sensorglucose[base::which(!is.na(table$sensorglucose))])
     cgmupload["cv", f] <-
-      (stats::sd(table$sensorglucose[base::which(!is.na(table$sensorglucose))])) /
-        base::mean(table$sensorglucose[base::which(!is.na(table$sensorglucose))])
+      (stats::sd(table$sensorglucose[base::which(
+        !is.na(table$sensorglucose)
+      )])) /
+      base::mean(table$sensorglucose[base::which(!is.na(table$sensorglucose))])
     cgmupload["min_sensor", f] <-
       base::min(table$sensorglucose[base::which(!is.na(table$sensorglucose))])
     cgmupload["max_sensor", f] <-
@@ -166,9 +210,14 @@ cgmvariables <- function(inputdirectory,
 
     # Excursions over 120 calculations.
     BGover120 <-
-      base::as.numeric(table$sensorglucose[base::which(!is.na(
-        table$sensorglucose
-      ))], length = 1)
+      base::as.numeric(
+        table$sensorglucose[base::which(
+          !is.na(
+            table$sensorglucose
+          )
+        )],
+        length = 1
+      )
     BGover120[BGover120 < 120] <- 0
     BGover120[BGover120 >= 120] <- 1
     BG120.rle <- base::rle(BGover120)
@@ -176,18 +225,25 @@ cgmvariables <- function(inputdirectory,
       base::as.numeric(BG120.rle$lengths[base::which(BG120.rle$values == 1)])
 
     cgmupload["excursions_over_120", f] <-
-      base::length(base::which(excursions120 >
-        ((aboveexcursionlength * 60) / interval)))
+      base::length(base::which(
+        excursions120 > ((aboveexcursionlength * 60) / interval)
+      ))
     cgmupload["min_spent_over_120", f] <- base::sum(BGover120) * (interval / 60)
     cgmupload["percent_time_over_120", f] <-
       ((base::sum(BGover120) * (interval / 60)) /
-        (base::length(table$sensorglucose) * (interval / 60))) * 100
+        (base::length(table$sensorglucose) * (interval / 60))) *
+      100
 
     # Over 140.
     BGover140 <-
-      base::as.numeric(table$sensorglucose[base::which(!is.na(
-        table$sensorglucose
-      ))], length = 1)
+      base::as.numeric(
+        table$sensorglucose[base::which(
+          !is.na(
+            table$sensorglucose
+          )
+        )],
+        length = 1
+      )
     BGover140[BGover140 < 140] <- 0
     BGover140[BGover140 >= 140] <- 1
     BG140.rle <- base::rle(BGover140)
@@ -195,18 +251,25 @@ cgmvariables <- function(inputdirectory,
       base::as.numeric(BG140.rle$lengths[base::which(BG140.rle$values == 1)])
 
     cgmupload["excursions_over_140", f] <-
-      base::length(base::which(excursions140 >
-        ((aboveexcursionlength * 60) / interval)))
+      base::length(base::which(
+        excursions140 > ((aboveexcursionlength * 60) / interval)
+      ))
     cgmupload["min_spent_over_140", f] <- base::sum(BGover140) * (interval / 60)
     cgmupload["percent_time_over_140", f] <-
       ((base::sum(BGover140) * (interval / 60)) /
-        (base::length(table$sensorglucose) * (interval / 60))) * 100
+        (base::length(table$sensorglucose) * (interval / 60))) *
+      100
 
     # Over 180.
     BGover180 <-
-      base::as.numeric(table$sensorglucose[base::which(!is.na(
-        table$sensorglucose
-      ))], length = 1)
+      base::as.numeric(
+        table$sensorglucose[base::which(
+          !is.na(
+            table$sensorglucose
+          )
+        )],
+        length = 1
+      )
     BGover180[BGover180 < 180] <- 0
     BGover180[BGover180 >= 180] <- 1
     BG180.rle <- base::rle(BGover180)
@@ -214,18 +277,25 @@ cgmvariables <- function(inputdirectory,
       base::as.numeric(BG180.rle$lengths[base::which(BG180.rle$values == 1)])
 
     cgmupload["excursions_over_180", f] <-
-      base::length(base::which(excursions180 >
-        ((aboveexcursionlength * 60) / interval)))
+      base::length(base::which(
+        excursions180 > ((aboveexcursionlength * 60) / interval)
+      ))
     cgmupload["min_spent_over_180", f] <- base::sum(BGover180) * (interval / 60)
     cgmupload["percent_time_over_180", f] <-
       ((base::sum(BGover180) * (interval / 60)) /
-        (base::length(table$sensorglucose) * (interval / 60))) * 100
+        (base::length(table$sensorglucose) * (interval / 60))) *
+      100
 
     # Over 200.
     BGover200 <-
-      base::as.numeric(table$sensorglucose[base::which(!is.na(
-        table$sensorglucose
-      ))], length = 1)
+      base::as.numeric(
+        table$sensorglucose[base::which(
+          !is.na(
+            table$sensorglucose
+          )
+        )],
+        length = 1
+      )
     BGover200[BGover200 < 200] <- 0
     BGover200[BGover200 >= 200] <- 1
     BG200.rle <- base::rle(BGover200)
@@ -233,25 +303,32 @@ cgmvariables <- function(inputdirectory,
       base::as.numeric(BG200.rle$lengths[base::which(BG200.rle$values == 1)])
 
     cgmupload["excursions_over_200", f] <-
-      base::length(base::which(excursions200 >
-        ((aboveexcursionlength * 60) / interval)))
+      base::length(base::which(
+        excursions200 > ((aboveexcursionlength * 60) / interval)
+      ))
     cgmupload["min_spent_over_200", f] <- base::sum(BGover200) * (interval / 60)
     cgmupload["percent_time_over_200", f] <-
       ((base::sum(BGover200) * (interval / 60)) /
-        (base::length(table$sensorglucose) * (interval / 60))) * 100
+        (base::length(table$sensorglucose) * (interval / 60))) *
+      100
 
     cgmupload["avg_excur_over_140_per_day", f] <-
       as.numeric(cgmupload["excursions_over_140", f]) /
-        as.numeric(cgmupload["num_days_good_data", f])
+      as.numeric(cgmupload["num_days_good_data", f])
     cgmupload["avg_excur_over_200_per_day", f] <-
       as.numeric(cgmupload["excursions_over_200", f]) /
-        as.numeric(cgmupload["num_days_good_data", f])
+      as.numeric(cgmupload["num_days_good_data", f])
 
     # Over 250.
     BGover250 <-
-      base::as.numeric(table$sensorglucose[base::which(!is.na(
-        table$sensorglucose
-      ))], length = 1)
+      base::as.numeric(
+        table$sensorglucose[base::which(
+          !is.na(
+            table$sensorglucose
+          )
+        )],
+        length = 1
+      )
     BGover250[BGover250 < 250] <- 0
     BGover250[BGover250 >= 250] <- 1
     BG250.rle <- base::rle(BGover250)
@@ -259,18 +336,25 @@ cgmvariables <- function(inputdirectory,
       base::as.numeric(BG250.rle$lengths[base::which(BG250.rle$values == 1)])
 
     cgmupload["excursions_over_250", f] <-
-      base::length(base::which(excursions250 >
-        ((aboveexcursionlength * 60) / interval)))
+      base::length(base::which(
+        excursions250 > ((aboveexcursionlength * 60) / interval)
+      ))
     cgmupload["min_spent_over_250", f] <- base::sum(BGover250) * (interval / 60)
     cgmupload["percent_time_over_250", f] <-
       ((base::sum(BGover250) * (interval / 60)) /
-        (base::length(table$sensorglucose) * (interval / 60))) * 100
+        (base::length(table$sensorglucose) * (interval / 60))) *
+      100
 
     # Under 54.
     BGunder54 <-
-      base::as.numeric(table$sensorglucose[base::which(!is.na(
-        table$sensorglucose
-      ))], length = 1)
+      base::as.numeric(
+        table$sensorglucose[base::which(
+          !is.na(
+            table$sensorglucose
+          )
+        )],
+        length = 1
+      )
     BGunder54[BGunder54 <= 54] <- 1
     BGunder54[BGunder54 > 54] <- 0
     BG54.rle <- base::rle(BGunder54)
@@ -278,18 +362,25 @@ cgmvariables <- function(inputdirectory,
       base::as.numeric(BG54.rle$lengths[base::which(BG54.rle$values == 1)])
 
     cgmupload["excursions_under_54", f] <-
-      base::length(base::which(excursions54 >
-        ((belowexcursionlength * 60) / interval)))
+      base::length(base::which(
+        excursions54 > ((belowexcursionlength * 60) / interval)
+      ))
     cgmupload["min_spent_under_54", f] <- base::sum(BGunder54) * (interval / 60)
     cgmupload["percent_time_under_54", f] <-
       ((base::sum(BGunder54) * (interval / 60)) /
-        (base::length(table$sensorglucose) * (interval / 60))) * 100
+        (base::length(table$sensorglucose) * (interval / 60))) *
+      100
 
     # Under 60.
     BGunder60 <-
-      base::as.numeric(table$sensorglucose[base::which(!is.na(
-        table$sensorglucose
-      ))], length = 1)
+      base::as.numeric(
+        table$sensorglucose[base::which(
+          !is.na(
+            table$sensorglucose
+          )
+        )],
+        length = 1
+      )
     BGunder60[BGunder60 <= 60] <- 1
     BGunder60[BGunder60 > 60] <- 0
     BG60.rle <- base::rle(BGunder60)
@@ -297,16 +388,19 @@ cgmvariables <- function(inputdirectory,
       base::as.numeric(BG60.rle$lengths[base::which(BG60.rle$values == 1)])
 
     cgmupload["excursions_under_60", f] <-
-      base::length(base::which(excursions60 >
-        ((belowexcursionlength * 60) / interval)))
+      base::length(base::which(
+        excursions60 > ((belowexcursionlength * 60) / interval)
+      ))
     cgmupload["min_spent_under_60", f] <- base::sum(BGunder60) * (interval / 60)
     cgmupload["percent_time_under_60", f] <-
       ((base::sum(BGunder60) * (interval / 60)) /
-        (base::length(table$sensorglucose) * (interval / 60))) * 100
+        (base::length(table$sensorglucose) * (interval / 60))) *
+      100
 
     # Under 70.
     BGunder70 <-
-      base::as.numeric(table$sensorglucose[base::which(!is.na(table$sensorglucose))],
+      base::as.numeric(
+        table$sensorglucose[base::which(!is.na(table$sensorglucose))],
         length = 1
       )
     BGunder70[BGunder70 <= 70] <- 1
@@ -316,23 +410,27 @@ cgmvariables <- function(inputdirectory,
       base::as.numeric(BG70.rle$lengths[base::which(BG70.rle$values == 1)])
 
     cgmupload["excursions_under_70", f] <-
-      base::length(base::which(excursions70 >
-        ((belowexcursionlength * 60) / interval)))
+      base::length(base::which(
+        excursions70 > ((belowexcursionlength * 60) / interval)
+      ))
     cgmupload["min_spent_under_70", f] <- base::sum(BGunder70) * (interval / 60)
     cgmupload["percent_time_under_70", f] <-
       ((base::sum(BGunder70) * (interval / 60)) /
-        (base::length(table$sensorglucose) * (interval / 60))) * 100
+        (base::length(table$sensorglucose) * (interval / 60))) *
+      100
 
     # Time in range.
     BGinrange <-
-      base::as.numeric(table$sensorglucose[base::which(!is.na(table$sensorglucose))],
+      base::as.numeric(
+        table$sensorglucose[base::which(!is.na(table$sensorglucose))],
         length = 1
       )
     BGinrange <- ifelse(BGinrange %in% 70:180, 1, 0)
     cgmupload["min_spent_70_180", f] <- base::sum(BGinrange) * (interval / 60)
     cgmupload["percent_time_70_180", f] <-
       ((base::sum(BGinrange) * (interval / 60)) /
-        (base::length(table$sensorglucose) * (interval / 60))) * 100
+        (base::length(table$sensorglucose) * (interval / 60))) *
+      100
 
     # Custom intervals
     if (!is.null(customintervals[[1]])) {
@@ -340,7 +438,8 @@ cgmvariables <- function(inputdirectory,
       highs <- unlist(lapply(customintervals, "[[", 2))
       for (r in 1:length(customintervals)) {
         # Range
-        BGinrange <- base::as.numeric(table$sensorglucose[base::which(!is.na(table$sensorglucose))],
+        BGinrange <- base::as.numeric(
+          table$sensorglucose[base::which(!is.na(table$sensorglucose))],
           length = 1
         )
         BGinrange <- ifelse(BGinrange %in% lows[r]:highs[r], 1, 0)
@@ -349,43 +448,62 @@ cgmvariables <- function(inputdirectory,
         percname <- paste0("percent_time_", lows[r], "_", highs[r])
         cgmupload[percname, f] <-
           ((base::sum(BGinrange) * (interval / 60)) /
-            (base::length(table$sensorglucose) * (interval / 60))) * 100
+            (base::length(table$sensorglucose) * (interval / 60))) *
+          100
         # Below
         BGunder <-
-          base::as.numeric(table$sensorglucose[base::which(!is.na(table$sensorglucose))],
+          base::as.numeric(
+            table$sensorglucose[base::which(!is.na(table$sensorglucose))],
             length = 1
           )
         BGunder[BGunder <= lows[r]] <- 1
         BGunder[BGunder > lows[r]] <- 0
         BGunder.rle <- base::rle(BGunder)
         excursionsunder <-
-          base::as.numeric(BGunder.rle$lengths[base::which(BGunder.rle$values == 1)])
+          base::as.numeric(BGunder.rle$lengths[base::which(
+            BGunder.rle$values == 1
+          )])
 
         cgmupload[paste0("excursions_under_", lows[r]), f] <-
-          base::length(base::which(excursionsunder >
-            ((belowexcursionlength * 60) / interval)))
-        cgmupload[paste0("min_spent_under_", lows[r]), f] <- base::sum(BGunder) * (interval / 60)
+          base::length(base::which(
+            excursionsunder > ((belowexcursionlength * 60) / interval)
+          ))
+        cgmupload[paste0("min_spent_under_", lows[r]), f] <- base::sum(
+          BGunder
+        ) *
+          (interval / 60)
         cgmupload[paste0("percent_time_under_", lows[r]), f] <-
           ((base::sum(BGunder) * (interval / 60)) /
-            (base::length(table$sensorglucose) * (interval / 60))) * 100
+            (base::length(table$sensorglucose) * (interval / 60))) *
+          100
         # Above
         BGover <-
-          base::as.numeric(table$sensorglucose[base::which(!is.na(
-            table$sensorglucose
-          ))], length = 1)
+          base::as.numeric(
+            table$sensorglucose[base::which(
+              !is.na(
+                table$sensorglucose
+              )
+            )],
+            length = 1
+          )
         BGover[BGover < highs[r]] <- 0
         BGover[BGover >= highs[r]] <- 1
         BGover.rle <- base::rle(BGover)
         excursionsover <-
-          base::as.numeric(BGover.rle$lengths[base::which(BGover.rle$values == 1)])
+          base::as.numeric(BGover.rle$lengths[base::which(
+            BGover.rle$values == 1
+          )])
 
         cgmupload[paste0("excursions_over_", highs[r]), f] <-
-          base::length(base::which(excursionsover >
-            ((aboveexcursionlength * 60) / interval)))
-        cgmupload[paste0("min_spent_over_", highs[r]), f] <- base::sum(BGover) * (interval / 60)
+          base::length(base::which(
+            excursionsover > ((aboveexcursionlength * 60) / interval)
+          ))
+        cgmupload[paste0("min_spent_over_", highs[r]), f] <- base::sum(BGover) *
+          (interval / 60)
         cgmupload[paste0("percent_time_over_", highs[r]), f] <-
           ((base::sum(BGover) * (interval / 60)) /
-            (base::length(table$sensorglucose) * (interval / 60))) * 100
+            (base::length(table$sensorglucose) * (interval / 60))) *
+          100
       }
     }
 
@@ -394,11 +512,18 @@ cgmvariables <- function(inputdirectory,
     # series of 1 or more values <70mg/dL. The first hyperglycemic value must be
     # within 2 hours of the last value in hypoglycemic series.
     # Find beginnings and ends of the series
-    hypo_series_ends <- table$timestamp[which(diff(table$sensorglucose < 70) == -1)] + lubridate::minutes(5)
-    hyper_series_starts <- table$timestamp[which(diff(table$sensorglucose > 180) == 1)]
+    hypo_series_ends <- table$timestamp[which(
+      diff(table$sensorglucose < 70) == -1
+    )] +
+      lubridate::minutes(5)
+    hyper_series_starts <- table$timestamp[which(
+      diff(table$sensorglucose > 180) == 1
+    )]
     # Check how many hyper series starts are within 2 hours of a hypo series end
     rhigh <- sapply(hypo_series_ends, function(t) {
-      w <- which(hyper_series_starts < t + lubridate::hours(2) & hyper_series_starts >= t)
+      w <- which(
+        hyper_series_starts < t + lubridate::hours(2) & hyper_series_starts >= t
+      )
       if (length(w) > 0) {
         return(w[1])
       } else {
@@ -410,8 +535,13 @@ cgmvariables <- function(inputdirectory,
     if (length(rhigh) > 0) {
       rhigh_metrics <- lapply(hyper_series_starts[rhigh], function(t) {
         # Time since last hypo value
-        onset_mins <- as.numeric(difftime(t,
-          table$timestamp[utils::tail(which(table$sensorglucose < 70 & table$timestamp < t), 1)] + lubridate::minutes(5),
+        onset_mins <- as.numeric(difftime(
+          t,
+          table$timestamp[utils::tail(
+            which(table$sensorglucose < 70 & table$timestamp < t),
+            1
+          )] +
+            lubridate::minutes(5),
           units = "mins"
         ))
         start <- which(table$timestamp == t)[1]
@@ -420,7 +550,12 @@ cgmvariables <- function(inputdirectory,
           end <- nrow(table)
         }
         d <- table[start:end, ]
-        d$mins <- as.numeric(difftime(d$timestamp, d$timestamp[1], units = "mins")) + (interval / 60)
+        d$mins <- as.numeric(difftime(
+          d$timestamp,
+          d$timestamp[1],
+          units = "mins"
+        )) +
+          (interval / 60)
         if (sum(duplicated(d$timestamp)) > 0) {
           d <- d[!duplicated(d$timestamp), ]
         }
@@ -432,17 +567,26 @@ cgmvariables <- function(inputdirectory,
         }
         # Return
         return(c(
-          start_time = t, end_time = table$timestamp[end] + lubridate::minutes(5),
-          rhigh_onset = onset_mins, rhigh_duration = dur, rhigh_auc = auc
+          start_time = t,
+          end_time = table$timestamp[end] + lubridate::minutes(5),
+          rhigh_onset = onset_mins,
+          rhigh_duration = dur,
+          rhigh_auc = auc
         ))
       })
       rhigh_metrics <- data.frame(do.call(rbind, rhigh_metrics))
-      rhigh_metrics$start_time <- as.POSIXct(rhigh_metrics$start_time, tz = "UTC")
+      rhigh_metrics$start_time <- as.POSIXct(
+        rhigh_metrics$start_time,
+        tz = "UTC"
+      )
       rhigh_metrics$end_time <- as.POSIXct(rhigh_metrics$end_time, tz = "UTC")
     }
     # SHigh is defined as any series of one or more SGVs > 180 mg/dl for 2
     # hours or more.
-    hyper_series_ends <- table$timestamp[which(diff(table$sensorglucose > 180) == -1)] + lubridate::minutes(5)
+    hyper_series_ends <- table$timestamp[which(
+      diff(table$sensorglucose > 180) == -1
+    )] +
+      lubridate::minutes(5)
     # If they start out high, ignore the first stretch of highs
     if (table$sensorglucose[1] > 180) {
       hyper_series_ends <- hyper_series_ends[-1]
@@ -451,7 +595,11 @@ cgmvariables <- function(inputdirectory,
     if (table$sensorglucose[nrow(table)] > 180) {
       hyper_series_starts <- hyper_series_starts[-length(hyper_series_starts)]
     }
-    hyper_series_lengths <- as.numeric(difftime(hyper_series_ends, hyper_series_starts, units = "mins"))
+    hyper_series_lengths <- as.numeric(difftime(
+      hyper_series_ends,
+      hyper_series_starts,
+      units = "mins"
+    ))
     # Check how many series are at least 2 hours
     shigh <- hyper_series_lengths >= 120
     # For each hyper series start, calculate series metrics
@@ -463,7 +611,12 @@ cgmvariables <- function(inputdirectory,
           end <- nrow(table)
         }
         d <- table[start:end, ]
-        d$mins <- as.numeric(difftime(d$timestamp, d$timestamp[1], units = "mins")) + (interval / 60)
+        d$mins <- as.numeric(difftime(
+          d$timestamp,
+          d$timestamp[1],
+          units = "mins"
+        )) +
+          (interval / 60)
         if (sum(duplicated(d$timestamp)) > 0) {
           d <- d[!duplicated(d$timestamp), ]
         }
@@ -475,23 +628,35 @@ cgmvariables <- function(inputdirectory,
         }
         # Return
         return(c(
-          start_time = t, end_time = table$timestamp[end] + lubridate::minutes(5),
-          shigh_duration = dur, shigh_auc = auc
+          start_time = t,
+          end_time = table$timestamp[end] + lubridate::minutes(5),
+          shigh_duration = dur,
+          shigh_auc = auc
         ))
       })
       shigh_metrics <- data.frame(do.call(rbind, shigh_metrics))
-      shigh_metrics$start_time <- as.POSIXct(shigh_metrics$start_time, tz = "UTC")
+      shigh_metrics$start_time <- as.POSIXct(
+        shigh_metrics$start_time,
+        tz = "UTC"
+      )
       shigh_metrics$end_time <- as.POSIXct(shigh_metrics$end_time, tz = "UTC")
     }
     # Rebound low is a series of 1 or more values <70 mg/dL preceded by any
     # series of 1 or more values >180mg/dL. The first hypoglycemic value must be
     # within 2 hours of the last value in hyperglycemic series.
     # Find beginnings and ends of the series
-    hyper_series_ends <- table$timestamp[which(diff(table$sensorglucose > 180) == -1)] + lubridate::minutes(5)
-    hypo_series_starts <- table$timestamp[which(diff(table$sensorglucose < 70) == 1)]
+    hyper_series_ends <- table$timestamp[which(
+      diff(table$sensorglucose > 180) == -1
+    )] +
+      lubridate::minutes(5)
+    hypo_series_starts <- table$timestamp[which(
+      diff(table$sensorglucose < 70) == 1
+    )]
     # Check how many hyper series starts are within 2 hours
     rlow <- sapply(hyper_series_ends, function(t) {
-      w <- which(hypo_series_starts <= t + lubridate::hours(2) & hypo_series_starts > t)
+      w <- which(
+        hypo_series_starts <= t + lubridate::hours(2) & hypo_series_starts > t
+      )
       if (length(w) > 0) {
         return(w[1])
       } else {
@@ -503,8 +668,13 @@ cgmvariables <- function(inputdirectory,
     if (length(rlow) > 0) {
       rlow_metrics <- lapply(hypo_series_starts[rlow], function(t) {
         # Time since last hypo value
-        onset_mins <- as.numeric(difftime(t,
-          table$timestamp[utils::tail(which(table$sensorglucose > 180 & table$timestamp < t), 1)] + lubridate::minutes(5),
+        onset_mins <- as.numeric(difftime(
+          t,
+          table$timestamp[utils::tail(
+            which(table$sensorglucose > 180 & table$timestamp < t),
+            1
+          )] +
+            lubridate::minutes(5),
           units = "mins"
         ))
         start <- which(table$timestamp == t)[1]
@@ -513,7 +683,12 @@ cgmvariables <- function(inputdirectory,
           end <- nrow(table)
         }
         d <- table[start:end, ]
-        d$mins <- as.numeric(difftime(d$timestamp, d$timestamp[1], units = "mins")) + (interval / 60)
+        d$mins <- as.numeric(difftime(
+          d$timestamp,
+          d$timestamp[1],
+          units = "mins"
+        )) +
+          (interval / 60)
         if (sum(duplicated(d$timestamp)) > 0) {
           d <- d[!duplicated(d$timestamp), ]
         }
@@ -525,8 +700,11 @@ cgmvariables <- function(inputdirectory,
         }
         # Return
         return(c(
-          start_time = t, end_time = table$timestamp[end] + lubridate::minutes(5),
-          rlow_onset = onset_mins, rlow_duration = dur, rlow_auc = auc
+          start_time = t,
+          end_time = table$timestamp[end] + lubridate::minutes(5),
+          rlow_onset = onset_mins,
+          rlow_duration = dur,
+          rlow_auc = auc
         ))
       })
       rlow_metrics <- data.frame(do.call(rbind, rlow_metrics))
@@ -535,7 +713,10 @@ cgmvariables <- function(inputdirectory,
     }
     # SLow is defined as any series of one or more SGVs <70 mg/dl
     # for 2 hours or more.
-    hypo_series_ends <- table$timestamp[which(diff(table$sensorglucose < 70) == -1)] + lubridate::minutes(5)
+    hypo_series_ends <- table$timestamp[which(
+      diff(table$sensorglucose < 70) == -1
+    )] +
+      lubridate::minutes(5)
     # If they start out low, ignore the first stretch of lows
     if (table$sensorglucose[1] < 70) {
       hypo_series_ends <- hypo_series_ends[-1]
@@ -544,7 +725,11 @@ cgmvariables <- function(inputdirectory,
     if (table$sensorglucose[nrow(table)] < 70) {
       hypo_series_starts <- hypo_series_starts[-length(hypo_series_starts)]
     }
-    hypo_series_lengths <- as.numeric(difftime(hypo_series_ends, hypo_series_starts, units = "mins"))
+    hypo_series_lengths <- as.numeric(difftime(
+      hypo_series_ends,
+      hypo_series_starts,
+      units = "mins"
+    ))
     # Check how many series are at least 2 hours
     slow <- hypo_series_lengths >= 120
     # For each hyper series start, calculate series metrics
@@ -556,7 +741,12 @@ cgmvariables <- function(inputdirectory,
           end <- nrow(table)
         }
         d <- table[start:end, ]
-        d$mins <- as.numeric(difftime(d$timestamp, d$timestamp[1], units = "mins")) + (interval / 60)
+        d$mins <- as.numeric(difftime(
+          d$timestamp,
+          d$timestamp[1],
+          units = "mins"
+        )) +
+          (interval / 60)
         if (sum(duplicated(d$timestamp)) > 0) {
           d <- d[!duplicated(d$timestamp), ]
         }
@@ -568,8 +758,10 @@ cgmvariables <- function(inputdirectory,
         }
         # Return
         return(c(
-          start_time = t, end_time = table$timestamp[end] + lubridate::minutes(5),
-          slow_duration = dur, slow_auc = auc
+          start_time = t,
+          end_time = table$timestamp[end] + lubridate::minutes(5),
+          slow_duration = dur,
+          slow_auc = auc
         ))
       })
       slow_metrics <- data.frame(do.call(rbind, slow_metrics))
@@ -582,14 +774,17 @@ cgmvariables <- function(inputdirectory,
         base::which(table$wake == 1)
     } else {
       daytime_indexes <-
-        base::which(base::as.numeric(base::format(table$timestamp, "%H")) %in%
-          daystart:dayend)
+        base::which(
+          base::as.numeric(base::format(table$timestamp, "%H")) %in%
+            daystart:dayend
+        )
     }
     daytime_sensor <- table$sensorglucose[daytime_indexes]
     xaxis <-
       base::seq(
-        from = 0, length.out = base::length(daytime_sensor), by =
-          (interval / 60)
+        from = 0,
+        length.out = base::length(daytime_sensor),
+        by = (interval / 60)
       )
     # Remove NAs if they are present.
     xaxis[base::which(is.na(daytime_sensor))] <- NA
@@ -600,44 +795,68 @@ cgmvariables <- function(inputdirectory,
 
     # TIR variables for daytime
     BGinrange <- ifelse(daytime_sensor %in% 70:180, 1, 0)
-    cgmupload["min_spent_70_180_day", f] <- base::sum(BGinrange, na.rm = T) * (interval / 60)
+    cgmupload["min_spent_70_180_day", f] <- base::sum(BGinrange, na.rm = T) *
+      (interval / 60)
     cgmupload["percent_time_70_180_day", f] <-
-      (base::sum(BGinrange, na.rm = T) * (interval / 60)) / (base::length(daytime_sensor) * (interval / 60)) * 100
+      (base::sum(BGinrange, na.rm = T) * (interval / 60)) /
+      (base::length(daytime_sensor) * (interval / 60)) *
+      100
 
     BGinrange <- ifelse(daytime_sensor < 54, 1, 0)
-    cgmupload["min_spent_under_54_day", f] <- base::sum(BGinrange, na.rm = T) * (interval / 60)
+    cgmupload["min_spent_under_54_day", f] <- base::sum(BGinrange, na.rm = T) *
+      (interval / 60)
     cgmupload["percent_time_under_54_day", f] <-
-      (base::sum(BGinrange, na.rm = T) * (interval / 60)) / (base::length(daytime_sensor) * (interval / 60)) * 100
+      (base::sum(BGinrange, na.rm = T) * (interval / 60)) /
+      (base::length(daytime_sensor) * (interval / 60)) *
+      100
 
     BGinrange <- ifelse(daytime_sensor < 60, 1, 0)
-    cgmupload["min_spent_under_60_day", f] <- base::sum(BGinrange, na.rm = T) * (interval / 60)
+    cgmupload["min_spent_under_60_day", f] <- base::sum(BGinrange, na.rm = T) *
+      (interval / 60)
     cgmupload["percent_time_under_60_day", f] <-
-      (base::sum(BGinrange, na.rm = T) * (interval / 60)) / (base::length(daytime_sensor) * (interval / 60)) * 100
+      (base::sum(BGinrange, na.rm = T) * (interval / 60)) /
+      (base::length(daytime_sensor) * (interval / 60)) *
+      100
 
     BGinrange <- ifelse(daytime_sensor < 70, 1, 0)
-    cgmupload["min_spent_under_70_day", f] <- base::sum(BGinrange, na.rm = T) * (interval / 60)
+    cgmupload["min_spent_under_70_day", f] <- base::sum(BGinrange, na.rm = T) *
+      (interval / 60)
     cgmupload["percent_time_under_70_day", f] <-
-      (base::sum(BGinrange, na.rm = T) * (interval / 60)) / (base::length(daytime_sensor) * (interval / 60)) * 100
+      (base::sum(BGinrange, na.rm = T) * (interval / 60)) /
+      (base::length(daytime_sensor) * (interval / 60)) *
+      100
 
     BGinrange <- ifelse(daytime_sensor > 140, 1, 0)
-    cgmupload["min_spent_over_140_day", f] <- base::sum(BGinrange, na.rm = T) * (interval / 60)
+    cgmupload["min_spent_over_140_day", f] <- base::sum(BGinrange, na.rm = T) *
+      (interval / 60)
     cgmupload["percent_time_over_140_day", f] <-
-      (base::sum(BGinrange, na.rm = T) * (interval / 60)) / (base::length(daytime_sensor) * (interval / 60)) * 100
+      (base::sum(BGinrange, na.rm = T) * (interval / 60)) /
+      (base::length(daytime_sensor) * (interval / 60)) *
+      100
 
     BGinrange <- ifelse(daytime_sensor > 180, 1, 0)
-    cgmupload["min_spent_over_180_day", f] <- base::sum(BGinrange, na.rm = T) * (interval / 60)
+    cgmupload["min_spent_over_180_day", f] <- base::sum(BGinrange, na.rm = T) *
+      (interval / 60)
     cgmupload["percent_time_over_180_day", f] <-
-      (base::sum(BGinrange, na.rm = T) * (interval / 60)) / (base::length(daytime_sensor) * (interval / 60)) * 100
+      (base::sum(BGinrange, na.rm = T) * (interval / 60)) /
+      (base::length(daytime_sensor) * (interval / 60)) *
+      100
 
     BGinrange <- ifelse(daytime_sensor > 200, 1, 0)
-    cgmupload["min_spent_over_200_day", f] <- base::sum(BGinrange, na.rm = T) * (interval / 60)
+    cgmupload["min_spent_over_200_day", f] <- base::sum(BGinrange, na.rm = T) *
+      (interval / 60)
     cgmupload["percent_time_over_200_day", f] <-
-      (base::sum(BGinrange, na.rm = T) * (interval / 60)) / (base::length(daytime_sensor) * (interval / 60)) * 100
+      (base::sum(BGinrange, na.rm = T) * (interval / 60)) /
+      (base::length(daytime_sensor) * (interval / 60)) *
+      100
 
     BGinrange <- ifelse(daytime_sensor > 250, 1, 0)
-    cgmupload["min_spent_over_250_day", f] <- base::sum(BGinrange, na.rm = T) * (interval / 60)
+    cgmupload["min_spent_over_250_day", f] <- base::sum(BGinrange, na.rm = T) *
+      (interval / 60)
     cgmupload["percent_time_over_250_day", f] <-
-      (base::sum(BGinrange, na.rm = T) * (interval / 60)) / (base::length(daytime_sensor) * (interval / 60)) * 100
+      (base::sum(BGinrange, na.rm = T) * (interval / 60)) /
+      (base::length(daytime_sensor) * (interval / 60)) *
+      100
 
     # Other daytime sensor glucose variables.
     cgmupload["daytime_avg_sensor_glucose", f] <-
@@ -651,20 +870,26 @@ cgmvariables <- function(inputdirectory,
       nighttime_indexes <- base::which(table$wake == 0)
     } else {
       nighttime_indexes <-
-        base::which(base::as.numeric(base::format(table$timestamp, "%H")) %in%
-          allhours[base::which(!(0:23 %in% daystart:dayend))])
+        base::which(
+          base::as.numeric(base::format(table$timestamp, "%H")) %in%
+            allhours[base::which(!(0:23 %in% daystart:dayend))]
+        )
     }
     if (length(nighttime_indexes) > 0) {
       nighttime_sensor <- table$sensorglucose[nighttime_indexes]
       xaxis <-
         base::seq(
-          from = 0, length.out = base::length(nighttime_indexes), by =
-            (interval / 60)
+          from = 0,
+          length.out = base::length(nighttime_indexes),
+          by = (interval / 60)
         )
 
       # Day/night ratio.
       cgmupload["day_night_sensor_ratio", f] <-
-        base::round(base::length(daytime_sensor) / base::length(nighttime_sensor), 1)
+        base::round(
+          base::length(daytime_sensor) / base::length(nighttime_sensor),
+          1
+        )
 
       # Remove NAs if they are present.
       xaxis[base::which(is.na(nighttime_sensor))] <- NA
@@ -675,44 +900,92 @@ cgmvariables <- function(inputdirectory,
 
       # TIR variables for nighttime
       BGinrange <- ifelse(nighttime_sensor %in% 70:180, 1, 0)
-      cgmupload["min_spent_70_180_night", f] <- base::sum(BGinrange, na.rm = T) * (interval / 60)
+      cgmupload["min_spent_70_180_night", f] <- base::sum(
+        BGinrange,
+        na.rm = T
+      ) *
+        (interval / 60)
       cgmupload["percent_time_70_180_night", f] <-
-        (base::sum(BGinrange, na.rm = T) * (interval / 60)) / (base::length(nighttime_sensor) * (interval / 60)) * 100
+        (base::sum(BGinrange, na.rm = T) * (interval / 60)) /
+        (base::length(nighttime_sensor) * (interval / 60)) *
+        100
 
       BGinrange <- ifelse(nighttime_sensor < 54, 1, 0)
-      cgmupload["min_spent_under_54_night", f] <- base::sum(BGinrange, na.rm = T) * (interval / 60)
+      cgmupload["min_spent_under_54_night", f] <- base::sum(
+        BGinrange,
+        na.rm = T
+      ) *
+        (interval / 60)
       cgmupload["percent_time_under_54_night", f] <-
-        (base::sum(BGinrange, na.rm = T) * (interval / 60)) / (base::length(nighttime_sensor) * (interval / 60)) * 100
+        (base::sum(BGinrange, na.rm = T) * (interval / 60)) /
+        (base::length(nighttime_sensor) * (interval / 60)) *
+        100
 
       BGinrange <- ifelse(nighttime_sensor < 60, 1, 0)
-      cgmupload["min_spent_under_60_night", f] <- base::sum(BGinrange, na.rm = T) * (interval / 60)
+      cgmupload["min_spent_under_60_night", f] <- base::sum(
+        BGinrange,
+        na.rm = T
+      ) *
+        (interval / 60)
       cgmupload["percent_time_under_60_night", f] <-
-        (base::sum(BGinrange, na.rm = T) * (interval / 60)) / (base::length(nighttime_sensor) * (interval / 60)) * 100
+        (base::sum(BGinrange, na.rm = T) * (interval / 60)) /
+        (base::length(nighttime_sensor) * (interval / 60)) *
+        100
 
       BGinrange <- ifelse(nighttime_sensor < 70, 1, 0)
-      cgmupload["min_spent_under_70_night", f] <- base::sum(BGinrange, na.rm = T) * (interval / 60)
+      cgmupload["min_spent_under_70_night", f] <- base::sum(
+        BGinrange,
+        na.rm = T
+      ) *
+        (interval / 60)
       cgmupload["percent_time_under_70_night", f] <-
-        (base::sum(BGinrange, na.rm = T) * (interval / 60)) / (base::length(nighttime_sensor) * (interval / 60)) * 100
+        (base::sum(BGinrange, na.rm = T) * (interval / 60)) /
+        (base::length(nighttime_sensor) * (interval / 60)) *
+        100
 
       BGinrange <- ifelse(nighttime_sensor > 140, 1, 0)
-      cgmupload["min_spent_over_140_night", f] <- base::sum(BGinrange, na.rm = T) * (interval / 60)
+      cgmupload["min_spent_over_140_night", f] <- base::sum(
+        BGinrange,
+        na.rm = T
+      ) *
+        (interval / 60)
       cgmupload["percent_time_over_140_night", f] <-
-        (base::sum(BGinrange, na.rm = T) * (interval / 60)) / (base::length(nighttime_sensor) * (interval / 60)) * 100
+        (base::sum(BGinrange, na.rm = T) * (interval / 60)) /
+        (base::length(nighttime_sensor) * (interval / 60)) *
+        100
 
       BGinrange <- ifelse(nighttime_sensor > 180, 1, 0)
-      cgmupload["min_spent_over_180_night", f] <- base::sum(BGinrange, na.rm = T) * (interval / 60)
+      cgmupload["min_spent_over_180_night", f] <- base::sum(
+        BGinrange,
+        na.rm = T
+      ) *
+        (interval / 60)
       cgmupload["percent_time_over_180_night", f] <-
-        (base::sum(BGinrange, na.rm = T) * (interval / 60)) / (base::length(nighttime_sensor) * (interval / 60)) * 100
+        (base::sum(BGinrange, na.rm = T) * (interval / 60)) /
+        (base::length(nighttime_sensor) * (interval / 60)) *
+        100
 
       BGinrange <- ifelse(nighttime_sensor > 200, 1, 0)
-      cgmupload["min_spent_over_200_night", f] <- base::sum(BGinrange, na.rm = T) * (interval / 60)
+      cgmupload["min_spent_over_200_night", f] <- base::sum(
+        BGinrange,
+        na.rm = T
+      ) *
+        (interval / 60)
       cgmupload["percent_time_over_200_night", f] <-
-        (base::sum(BGinrange, na.rm = T) * (interval / 60)) / (base::length(nighttime_sensor) * (interval / 60)) * 100
+        (base::sum(BGinrange, na.rm = T) * (interval / 60)) /
+        (base::length(nighttime_sensor) * (interval / 60)) *
+        100
 
       BGinrange <- ifelse(nighttime_sensor > 250, 1, 0)
-      cgmupload["min_spent_over_250_night", f] <- base::sum(BGinrange, na.rm = T) * (interval / 60)
+      cgmupload["min_spent_over_250_night", f] <- base::sum(
+        BGinrange,
+        na.rm = T
+      ) *
+        (interval / 60)
       cgmupload["percent_time_over_250_night", f] <-
-        (base::sum(BGinrange, na.rm = T) * (interval / 60)) / (base::length(nighttime_sensor) * (interval / 60)) * 100
+        (base::sum(BGinrange, na.rm = T) * (interval / 60)) /
+        (base::length(nighttime_sensor) * (interval / 60)) *
+        100
 
       # Other nighttime sensor glucose variables.
       cgmupload["nighttime_avg_sens_glucose", f] <-
@@ -724,14 +997,24 @@ cgmvariables <- function(inputdirectory,
 
     # Total AUC.
     sensorBG <- base::as.numeric(table$sensorglucose)
-    xaxis_minute <- as.numeric(difftime(table$timestamp, table$timestamp[1], units = "mins"))
+    xaxis_minute <- as.numeric(difftime(
+      table$timestamp,
+      table$timestamp[1],
+      units = "mins"
+    ))
     # Remove NAs if they are present.
     aucs <- pracma::cumtrapz(xaxis_minute, sensorBG)
     cgmupload["total_auc", f] <- aucs[base::length(aucs)]
-    cgmupload["hourly_auc", f] <- aucs[base::length(aucs)] / 60 / as.numeric(difftime(max(table$timestamp), min(table$timestamp), units = "hours"))
+    cgmupload["hourly_auc", f] <- aucs[base::length(aucs)] /
+      60 /
+      as.numeric(difftime(
+        max(table$timestamp),
+        min(table$timestamp),
+        units = "hours"
+      ))
     cgmupload["average_auc_per_day", f] <-
       base::as.numeric(cgmupload["total_auc", f]) /
-        base::as.numeric(cgmupload["num_days_good_data", f])
+      base::as.numeric(cgmupload["num_days_good_data", f])
 
     # AUC over 180.
     sensorover180 <- table$sensorglucose
@@ -739,8 +1022,9 @@ cgmvariables <- function(inputdirectory,
     sensorover180 <- sensorover180[!is.na(sensorover180)]
     xaxis <-
       base::seq(
-        from = 0, length.out = base::length(sensorover180), by =
-          (interval / 60)
+        from = 0,
+        length.out = base::length(sensorover180),
+        by = (interval / 60)
       )
 
     # Calculate cumulative AUC, and subtract recatangle where length = 180 &
@@ -755,13 +1039,15 @@ cgmvariables <- function(inputdirectory,
     }
     cgmupload["average_auc_180", f] <-
       base::as.numeric(cgmupload["auc_over_180", f]) /
-        base::as.numeric(cgmupload["num_days_good_data", f])
+      base::as.numeric(cgmupload["num_days_good_data", f])
 
     # Calculate MAGE.
     # Smooth data using an exponentially weighted moving average, calculate SD of
     # unsmoothed data.
     table$smoothed <-
-      base::as.numeric(zoo::rollapply(zoo::zoo(table$sensorglucose), 9,
+      base::as.numeric(zoo::rollapply(
+        zoo::zoo(table$sensorglucose),
+        9,
         function(x) {
           c(1, 2, 4, 8, 16, 8, 4, 2, 1) %*%
             (x / 46)
@@ -769,10 +1055,14 @@ cgmvariables <- function(inputdirectory,
         fill = NA
       ))
     table$smoothed[1:4] <- base::mean(stats::na.omit(table$sensorglucose[1:4]))
-    table$smoothed[(base::length(table$smoothed) - 3):
-    base::length(table$smoothed)] <-
-      base::mean(table$sensorglucose[(base::length(table$sensorglucose) - 3):
-      base::length(table$sensorglucose)])
+    table$smoothed[
+      (base::length(table$smoothed) - 3):base::length(table$smoothed)
+    ] <-
+      base::mean(table$sensorglucose[
+        (base::length(table$sensorglucose) - 3):base::length(
+          table$sensorglucose
+        )
+      ])
 
     sd <- stats::sd(table$sensorglucose)
     # Identify turning points, peaks, and nadirs.
@@ -782,11 +1072,15 @@ cgmvariables <- function(inputdirectory,
     # Calculate the difference between each nadir and its following peak. If the
     # data starts on a peak, remove it. Otherwise remove the final pit to create an
     # even number of pits and peaks.
-    if (tpoints[["firstispeak"]] == TRUE && base::length(peaks) !=
-      base::length(pits)) {
+    if (
+      tpoints[["firstispeak"]] == TRUE &&
+        base::length(peaks) != base::length(pits)
+    ) {
       peaks <- peaks[2:base::length(peaks)]
-    } else if (tpoints[["firstispeak"]] == FALSE &&
-      base::length(peaks) != base::length(pits)) {
+    } else if (
+      tpoints[["firstispeak"]] == FALSE &&
+        base::length(peaks) != base::length(pits)
+    ) {
       pits <- pits[1:(base::length(pits) - 1)]
     }
     differences <- table$sensorglucose[peaks] - table$sensorglucose[pits]
@@ -798,21 +1092,25 @@ cgmvariables <- function(inputdirectory,
         base::mean(stats::na.omit(differences[base::which(differences > sd)]))
     } else if (magedef == "1.5sd") {
       cgmupload["r_mage", f] <-
-        base::mean(stats::na.omit(differences[base::which(differences >
-          (sd * 1.5))]))
+        base::mean(stats::na.omit(differences[base::which(
+          differences > (sd * 1.5)
+        )]))
     } else if (magedef == "2sd") {
       cgmupload["r_mage", f] <-
-        base::mean(stats::na.omit(differences[base::which(differences >
-          (sd * 2))]))
+        base::mean(stats::na.omit(differences[base::which(
+          differences > (sd * 2)
+        )]))
     } else {
       cgmupload["r_mage", f] <-
-        base::mean(stats::na.omit(differences[base::which(differences >
-          magedef)]))
+        base::mean(stats::na.omit(differences[base::which(
+          differences > magedef
+        )]))
     }
 
     # J-index
     cgmupload["j_index", f] <-
-      0.001 * (base::mean(table$sensorglucose, na.rm = T) +
+      0.001 *
+      (base::mean(table$sensorglucose, na.rm = T) +
         stats::sd(table$sensorglucose, na.rm = T))
     # CONGA
     n <- (congan * 3600)
@@ -821,16 +1119,20 @@ cgmvariables <- function(inputdirectory,
     conga.times <- conga.times[base::order(conga.times)]
     conga.times <- conga.times[base::which(conga.times %in% table$timestamp)]
     begin.times <- conga.times - n
-    suppressWarnings(congas <- table$sensorglucose[base::which(table$timestamp %in% conga.times)] -
-      table$sensorglucose[base::which(table$timestamp %in% begin.times)])
+    suppressWarnings(
+      congas <- table$sensorglucose[base::which(
+        table$timestamp %in% conga.times
+      )] -
+        table$sensorglucose[base::which(table$timestamp %in% begin.times)]
+    )
     cgmupload[base::paste0("conga_", congan), f] <- stats::sd(congas, na.rm = T)
     # MODD.
     table$time <- lubridate::round_date(table$timestamp, "5 minutes")
     table$time <- base::strftime(table$time, format = "%H:%M", tz = "UTC")
     moddtable <-
       base::data.frame(base::matrix(
-        ncol = 2, nrow =
-          base::length(unique(table$time))
+        ncol = 2,
+        nrow = base::length(unique(table$time))
       ))
     base::colnames(moddtable) <- c("time", "mean_differences")
     moddtable$time <- base::unique(table$time)

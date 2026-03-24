@@ -42,17 +42,23 @@
 #' }
 #' @export
 
-cleandata <- function(inputdirectory,
-                      outputdirectory = tempdir(),
-                      removegaps = TRUE,
-                      gapfill = TRUE,
-                      maximumgap = 20,
-                      id_filename = F,
-                      verbose = F,
-                      unit = "mg/dL") {
+cleandata <- function(
+  inputdirectory,
+  outputdirectory = tempdir(),
+  removegaps = TRUE,
+  gapfill = TRUE,
+  maximumgap = 20,
+  id_filename = F,
+  verbose = F,
+  unit = "mg/dL"
+) {
   # Set system locale to read all characters. Read in file list. Creat output
   # directory.
-  files <- base::list.files(path = inputdirectory, full.names = TRUE, recursive = T)
+  files <- base::list.files(
+    path = inputdirectory,
+    full.names = TRUE,
+    recursive = T
+  )
   base::dir.create(outputdirectory, showWarnings = FALSE)
   # Read in data, check CGM type.
   for (f in 1:base::length(files)) {
@@ -62,7 +68,8 @@ cleandata <- function(inputdirectory,
     ext <- tools::file_ext(files[f])
     if (ext == "txt") {
       enc <- base::as.character(readr::guess_encoding(files[f])[1, 1])
-      table <- utils::read.table(files[f],
+      table <- utils::read.table(
+        files[f],
         sep = "\t",
         skipNul = TRUE,
         header = TRUE,
@@ -72,13 +79,15 @@ cleandata <- function(inputdirectory,
         comment.char = ""
       )
     } else if (ext == "csv") {
-      table <- utils::read.csv(files[f],
+      table <- utils::read.csv(
+        files[f],
         stringsAsFactors = FALSE,
         header = TRUE,
         na.strings = ""
       )
       if (base::ncol(table) <= 2) {
-        table <- utils::read.csv(files[f],
+        table <- utils::read.csv(
+          files[f],
           sep = ";",
           stringsAsFactors = FALSE,
           header = TRUE,
@@ -86,7 +95,10 @@ cleandata <- function(inputdirectory,
         )
       }
     } else if (ext == "xls" | ext == "xlsx" | ext == "xlsm") {
-      table <- suppressMessages(readxl::read_excel(files[f], col_types = "text"))
+      table <- suppressMessages(readxl::read_excel(
+        files[f],
+        col_types = "text"
+      ))
       table <- as.data.frame(table)
     } else if (ext == "xml") {
       doc <- XML::xmlParse(files[f])
@@ -110,9 +122,17 @@ cleandata <- function(inputdirectory,
     } else if (ext == "ASC") {
       table <- utils::read.delim(files[f])
     }
-    if (base::ncol(table) == 3 && !is.na(table[1, 3]) && table[1, 3] == "Serial Number") {
+    if (
+      base::ncol(table) == 3 &&
+        !is.na(table[1, 3]) &&
+        table[1, 3] == "Serial Number"
+    ) {
       cgmtype <- "dexcomg6"
-    } else if (base::ncol(table) == 3 & base::colnames(table)[1] != "subjectid" & (base::colnames(table)[1] != "Name" | base::ncol(table) == 2)) {
+    } else if (
+      base::ncol(table) == 3 &
+        base::colnames(table)[1] != "subjectid" &
+        (base::colnames(table)[1] != "Name" | base::ncol(table) == 2)
+    ) {
       cgmtype <- "diasend"
     } else if (base::ncol(table) == 18 | base::ncol(table) == 19) {
       if (table[2, 1] == "Device") {
@@ -126,10 +146,17 @@ cleandata <- function(inputdirectory,
       cgmtype <- "dexcom"
     } else if (base::ncol(table) >= 47) {
       cgmtype <- "carelink"
-    } else if (base::ncol(table) == 3 && base::colnames(table)[2] == "timestamp" &&
-      base::colnames(table)[3] == "sensorglucose") {
+    } else if (
+      base::ncol(table) == 3 &&
+        base::colnames(table)[2] == "timestamp" &&
+        base::colnames(table)[3] == "sensorglucose"
+    ) {
       cgmtype <- "manual"
-    } else if (base::ncol(table) == 17 | base::ncol(table) == 22 | base::ncol(table) == 34) {
+    } else if (
+      base::ncol(table) == 17 |
+        base::ncol(table) == 22 |
+        base::ncol(table) == 34
+    ) {
       cgmtype <- "ipro"
     } else if (base::ncol(table) == 6 & ext == "ASC") {
       cgmtype <- "asc"
@@ -142,7 +169,12 @@ cleandata <- function(inputdirectory,
     } else if (base::ncol(table) == 3 && table[3, 3] == "Serial Number") {
       cgmtype <- "omnipod5"
     } else {
-      stop(base::paste("File '", files[f], "' is formatted incorrectly and the data cannot be read.", sep = ""))
+      stop(base::paste(
+        "File '",
+        files[f],
+        "' is formatted incorrectly and the data cannot be read.",
+        sep = ""
+      ))
     }
     ext <- paste0("\\.", ext)
     # Format columns.
@@ -160,7 +192,9 @@ cleandata <- function(inputdirectory,
       } else {
         id <- sub(ext, "", basename(files[f]))
       }
-      base::colnames(table) <- table[base::which(table[, 3] == "Sensor")[1] + 1, ]
+      base::colnames(table) <- table[
+        base::which(table[, 3] == "Sensor")[1] + 1,
+      ]
       table <- table[-c(1:(base::which(table[, 3] == "Sensor")[1] + 1)), ]
       table$timestamp <- base::paste(table$Date, table$Time)
       table$timestamp <- base::gsub(".{3}$", "", table$timestamp)
@@ -173,7 +207,9 @@ cleandata <- function(inputdirectory,
       } else {
         id <- sub(ext, "", basename(files[f]))
       }
-      table$sensorglucose <- table[, grep("glucose", tolower(colnames(table)))[1]]
+      table$sensorglucose <- table[, grep("glucose", tolower(colnames(table)))[
+        1
+      ]]
       table$timestamp <- table[, grep("timestamp", tolower(colnames(table)))]
       table <- table[, c("timestamp", "sensorglucose")]
       table$timestamp <- base::sub("T", " ", table$timestamp)
@@ -217,9 +253,13 @@ cleandata <- function(inputdirectory,
         id <- sub(ext, "", basename(files[f]))
       }
       table$sensorglucose <-
-        base::suppressWarnings(base::as.numeric(as.character(table$sensorglucose)))
+        base::suppressWarnings(base::as.numeric(as.character(
+          table$sensorglucose
+        )))
       table <-
-        table[-c(max(base::which(!is.na(table$sensorglucose))) + 1:nrow(table)), ]
+        table[
+          -c(max(base::which(!is.na(table$sensorglucose))) + 1:nrow(table)),
+        ]
       table <- table[, -c(1)]
     } else if (cgmtype == "ipro") {
       base::colnames(table) <- table[11, ]
@@ -230,7 +270,8 @@ cleandata <- function(inputdirectory,
       }
       table <- table[-c(1:11), ]
       if (grepl("- | /", table$Timestamp[1]) == F) {
-        table$Timestamp <- base::as.POSIXct(as.numeric(table$Timestamp) * (60 * 60 * 24),
+        table$Timestamp <- base::as.POSIXct(
+          as.numeric(table$Timestamp) * (60 * 60 * 24),
           origin = "1899-12-30",
           tz = "UTC"
         )
@@ -294,9 +335,16 @@ cleandata <- function(inputdirectory,
     # If necessary, remove rows with no data.
     table$timestamp <- parsedate::parse_date(table$timestamp, approx = F)
     table$sensorglucose <-
-      base::suppressWarnings(base::as.numeric(base::sub(",", ".", table$sensorglucose)))
+      base::suppressWarnings(base::as.numeric(base::sub(
+        ",",
+        ".",
+        table$sensorglucose
+      )))
     table <- table[base::order(table$timestamp), ]
-    table <- table[!(format(table$timestamp, "%H:%M:%S") == "00:00:00" & is.na(table$sensorglucose)), ]
+    table <- table[
+      !(format(table$timestamp, "%H:%M:%S") == "00:00:00" &
+        is.na(table$sensorglucose)),
+    ]
     if (NA %in% table$timestamp) {
       table <- table[-c(base::which(is.na(table$timestamp))), ]
     }
@@ -304,11 +352,13 @@ cleandata <- function(inputdirectory,
       table$sensorglucose <- table$sensorglucose * 18
     }
     recordstart <-
-      base::strftime(table$timestamp[min(which(!is.na(table$sensorglucose)))],
+      base::strftime(
+        table$timestamp[min(which(!is.na(table$sensorglucose)))],
         format = "%m/%d/%Y %T"
       )
     removaltime <-
-      base::strftime(table$timestamp[length(table$timestamp)],
+      base::strftime(
+        table$timestamp[length(table$timestamp)],
         format = "%m/%d/%Y %T"
       )
     # Set interval based on mode of timestamp diff.
@@ -326,20 +376,27 @@ cleandata <- function(inputdirectory,
       # Determine which row contains the timestamp closest to hour4, remove all rows
       # up to and including that row.
       table <-
-        table[-c(1:(which(abs(as.numeric(table$timestamp) - hour4) ==
-          min(abs(as.numeric(table$timestamp) - hour4), na.rm = T))[1])), ]
+        table[
+          -c(
+            1:(which(
+              abs(as.numeric(table$timestamp) - hour4) ==
+                min(abs(as.numeric(table$timestamp) - hour4), na.rm = T)
+            )[1])
+          ),
+        ]
 
       # Fill in small sensor glucose data gaps.
       if (gapfill == TRUE) {
-        table$sensorglucose <- zoo::na.approx(table$sensorglucose,
+        table$sensorglucose <- zoo::na.approx(
+          table$sensorglucose,
           na.rm = FALSE,
           maxgap = (maximumgap * 60) / interval
         )
       }
       # If remaining gaps are larger than the maximum, remove the 24 chunk containing
       # the gap.
-      repeat(
-        if (NA %in% table$sensorglucose) {
+      repeat {
+        (if (NA %in% table$sensorglucose) {
           # Determine the start time for the sensor data gap.
           startNA <-
             base::as.numeric(table$timestamp[base::min(base::which(is.na(
@@ -347,43 +404,78 @@ cleandata <- function(inputdirectory,
             )))])
           # Add 24 hours minus one recording interval.
           hour24 <- startNA + (86400 - interval)
-          table <- table[-c(base::suppressWarnings(base::which(base::abs(
-            base::as.numeric(table$timestamp) - startNA
-          ) == base::min(base::abs(
-            base::as.numeric(table$timestamp) - startNA
-          ))):(base::which(
-            base::abs(base::as.numeric(
-              table$timestamp
-            ) - hour24) == base::min(base::abs(
-              base::as.numeric(table$timestamp) - hour24
-            ))
-          )))), ]
+          table <- table[
+            -c(base::suppressWarnings(
+              base::which(
+                base::abs(
+                  base::as.numeric(table$timestamp) - startNA
+                ) ==
+                  base::min(base::abs(
+                    base::as.numeric(table$timestamp) - startNA
+                  ))
+              ):(base::which(
+                base::abs(
+                  base::as.numeric(
+                    table$timestamp
+                  ) -
+                    hour24
+                ) ==
+                  base::min(base::abs(
+                    base::as.numeric(table$timestamp) - hour24
+                  ))
+              ))
+            )),
+          ]
         } else if (!(NA %in% table$sensorglucose)) {
           break()
         })
+      }
       if (base::length(table$timestamp) == 0) {
-        stop(base::paste("File '", files[f], "' does not have enough data and
+        stop(base::paste(
+          "File '",
+          files[f],
+          "' does not have enough data and
                          cannot be processed with the current settings.",
           sep = ""
         ))
       }
       # Trim end of data so it is in 24 hour chunks.
       seconds <-
-        ((base::as.numeric(base::floor(table$timestamp[base::length(
-          table$timestamp
-        )] - table$timestamp[1]))) * 86400) - interval
+        ((base::as.numeric(base::floor(
+          table$timestamp[base::length(
+            table$timestamp
+          )] -
+            table$timestamp[1]
+        ))) *
+          86400) -
+        interval
       table <-
-        table[-c(base::which(table$timestamp >
-          (table$timestamp[1] + seconds))), ]
-      if ((1 - base::as.numeric(table$timestamp[base::length(
-        table$timestamp
-      )] - table$timestamp[1]) %% 1) > 0.1) {
-        seconds <- ((base::as.numeric(base::floor(table$timestamp[base::length(
-          table$timestamp
-        )] - table$timestamp[1]))) * 86400) - interval
+        table[
+          -c(base::which(table$timestamp > (table$timestamp[1] + seconds))),
+        ]
+      if (
+        (1 -
+          base::as.numeric(
+            table$timestamp[base::length(
+              table$timestamp
+            )] -
+              table$timestamp[1]
+          ) %%
+            1) >
+          0.1
+      ) {
+        seconds <- ((base::as.numeric(base::floor(
+          table$timestamp[base::length(
+            table$timestamp
+          )] -
+            table$timestamp[1]
+        ))) *
+          86400) -
+          interval
         table <-
-          table[-c(base::which(table$timestamp >
-            (table$timestamp[1] + seconds))), ]
+          table[
+            -c(base::which(table$timestamp > (table$timestamp[1] + seconds))),
+          ]
       }
     }
     table$subjectid <- ""
@@ -393,9 +485,15 @@ cleandata <- function(inputdirectory,
     table$subjectid <- as.character(table$subjectid)
     table <- table[, c("subjectid", "timestamp", "sensorglucose")]
     filename <-
-      base::paste(outputdirectory, "/", tools::file_path_sans_ext(
-        basename(files[f])
-      ), ".csv", sep = "")
+      base::paste(
+        outputdirectory,
+        "/",
+        tools::file_path_sans_ext(
+          basename(files[f])
+        ),
+        ".csv",
+        sep = ""
+      )
     utils::write.csv(as.data.frame(table), file = filename, row.names = FALSE)
   }
 }
