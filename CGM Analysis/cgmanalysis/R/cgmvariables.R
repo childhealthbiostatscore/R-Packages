@@ -218,8 +218,8 @@ cgmvariables <- function(
         )],
         length = 1
       )
-    BGover120[BGover120 < 120] <- 0
-    BGover120[BGover120 >= 120] <- 1
+    BGover120[BGover120 <= 120] <- 0
+    BGover120[BGover120 > 120] <- 1
     BG120.rle <- base::rle(BGover120)
     excursions120 <-
       base::as.numeric(BG120.rle$lengths[base::which(BG120.rle$values == 1)])
@@ -244,8 +244,8 @@ cgmvariables <- function(
         )],
         length = 1
       )
-    BGover140[BGover140 < 140] <- 0
-    BGover140[BGover140 >= 140] <- 1
+    BGover140[BGover140 <= 140] <- 0
+    BGover140[BGover140 > 140] <- 1
     BG140.rle <- base::rle(BGover140)
     excursions140 <-
       base::as.numeric(BG140.rle$lengths[base::which(BG140.rle$values == 1)])
@@ -270,8 +270,8 @@ cgmvariables <- function(
         )],
         length = 1
       )
-    BGover180[BGover180 < 180] <- 0
-    BGover180[BGover180 >= 180] <- 1
+    BGover180[BGover180 <= 180] <- 0
+    BGover180[BGover180 > 180] <- 1
     BG180.rle <- base::rle(BGover180)
     excursions180 <-
       base::as.numeric(BG180.rle$lengths[base::which(BG180.rle$values == 1)])
@@ -296,8 +296,8 @@ cgmvariables <- function(
         )],
         length = 1
       )
-    BGover200[BGover200 < 200] <- 0
-    BGover200[BGover200 >= 200] <- 1
+    BGover200[BGover200 <= 200] <- 0
+    BGover200[BGover200 > 200] <- 1
     BG200.rle <- base::rle(BGover200)
     excursions200 <-
       base::as.numeric(BG200.rle$lengths[base::which(BG200.rle$values == 1)])
@@ -329,8 +329,8 @@ cgmvariables <- function(
         )],
         length = 1
       )
-    BGover250[BGover250 < 250] <- 0
-    BGover250[BGover250 >= 250] <- 1
+    BGover250[BGover250 <= 250] <- 0
+    BGover250[BGover250 > 250] <- 1
     BG250.rle <- base::rle(BGover250)
     excursions250 <-
       base::as.numeric(BG250.rle$lengths[base::which(BG250.rle$values == 1)])
@@ -355,8 +355,8 @@ cgmvariables <- function(
         )],
         length = 1
       )
-    BGunder54[BGunder54 <= 54] <- 1
-    BGunder54[BGunder54 > 54] <- 0
+    BGunder54[BGunder54 < 54] <- 1
+    BGunder54[BGunder54 >= 54] <- 0
     BG54.rle <- base::rle(BGunder54)
     excursions54 <-
       base::as.numeric(BG54.rle$lengths[base::which(BG54.rle$values == 1)])
@@ -381,8 +381,8 @@ cgmvariables <- function(
         )],
         length = 1
       )
-    BGunder60[BGunder60 <= 60] <- 1
-    BGunder60[BGunder60 > 60] <- 0
+    BGunder60[BGunder60 < 60] <- 1
+    BGunder60[BGunder60 >= 60] <- 0
     BG60.rle <- base::rle(BGunder60)
     excursions60 <-
       base::as.numeric(BG60.rle$lengths[base::which(BG60.rle$values == 1)])
@@ -403,8 +403,8 @@ cgmvariables <- function(
         table$sensorglucose[base::which(!is.na(table$sensorglucose))],
         length = 1
       )
-    BGunder70[BGunder70 <= 70] <- 1
-    BGunder70[BGunder70 > 70] <- 0
+    BGunder70[BGunder70 < 70] <- 1
+    BGunder70[BGunder70 >= 70] <- 0
     BG70.rle <- base::rle(BGunder70)
     excursions70 <-
       base::as.numeric(BG70.rle$lengths[base::which(BG70.rle$values == 1)])
@@ -442,7 +442,7 @@ cgmvariables <- function(
           table$sensorglucose[base::which(!is.na(table$sensorglucose))],
           length = 1
         )
-        BGinrange <- ifelse(BGinrange %in% lows[r]:highs[r], 1, 0)
+        BGinrange <- ifelse(BGinrange >= lows[r] & BGinrange <= highs[r], 1, 0)
         minname <- paste0("min_spent_", lows[r], "_", highs[r])
         cgmupload[minname, f] <- base::sum(BGinrange) * (interval / 60)
         percname <- paste0("percent_time_", lows[r], "_", highs[r])
@@ -456,8 +456,8 @@ cgmvariables <- function(
             table$sensorglucose[base::which(!is.na(table$sensorglucose))],
             length = 1
           )
-        BGunder[BGunder <= lows[r]] <- 1
-        BGunder[BGunder > lows[r]] <- 0
+        BGunder[BGunder < lows[r]] <- 1
+        BGunder[BGunder >= lows[r]] <- 0
         BGunder.rle <- base::rle(BGunder)
         excursionsunder <-
           base::as.numeric(BGunder.rle$lengths[base::which(
@@ -486,8 +486,8 @@ cgmvariables <- function(
             )],
             length = 1
           )
-        BGover[BGover < highs[r]] <- 0
-        BGover[BGover >= highs[r]] <- 1
+        BGover[BGover <= highs[r]] <- 0
+        BGover[BGover > highs[r]] <- 1
         BGover.rle <- base::rle(BGover)
         excursionsover <-
           base::as.numeric(BGover.rle$lengths[base::which(
